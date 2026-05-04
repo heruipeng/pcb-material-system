@@ -17,6 +17,7 @@
         </div>
         <button class="btn btn-primary" onclick="doSearch()">Search</button>
         <button class="btn btn-default" onclick="doReset()">Reset</button>
+        <button class="btn btn-success" onclick="generateReport()">Generate</button>
     </div>
 </div>
 
@@ -31,10 +32,11 @@
                 <th>Description</th>
                 <th style="width:100px;">Creator</th>
                 <th style="width:150px;">Updated</th>
+                <th style="width:100px;">Actions</th>
             </tr>
         </thead>
         <tbody id="reportTable">
-            <tr><td colspan="6"><div class="empty-state"><p>Loading...</p></div></td></tr>
+            <tr><td colspan="7"><div class="empty-state"><p>Loading...</p></div></td></tr>
         </tbody>
     </table>
 </div>
@@ -47,17 +49,30 @@ function loadReports() {
     if(kw) p.set('search', kw);
     if(tp) p.set('report_type', tp);
     fetch('/api/reports/?' + p.toString())
-        .then(r => r.json()).then(d => {
-            var tbody = document.getElementById('reportTable');
+        .then(r => r.json()).then(function(d) {
+            var tb = document.getElementById('reportTable');
             if (d.results && d.results.length) {
-                tbody.innerHTML = d.results.map(function(r) {
-                    return '<tr><td><strong>'+r.name+'</strong></td><td><span class="tag" style="color:#409EFF;background:#ecf5ff;border:1px solid #b3d8ff;">'+ (r.report_type_display || r.report_type) +'</span></td><td>'+ (r.category_name || '-') +'</td><td style="color:#909399;">'+ (r.description || '-') +'</td><td>'+ (r.created_by_name || '-') +'</td><td>'+ new Date(r.updated_at).toLocaleString('zh-CN') +'</td></tr>';
+                tb.innerHTML = d.results.map(function(r) {
+                    return '<tr><td><strong>'+r.name+'</strong></td><td><span class="tag" style="color:#409EFF;background:#ecf5ff;border:1px solid #b3d8ff;">'+ (r.report_type_display || r.report_type) +'</span></td><td>'+ (r.category_name || '-') +'</td><td style="color:#909399;">'+ (r.description || '-') +'</td><td>'+ (r.created_by_name || '-') +'</td><td>'+ new Date(r.updated_at).toLocaleString('zh-CN') +'</td><td><a href="/reports/'+r.id+'/" class="link-btn">Detail</a> <a href="javascript:void(0)" class="link-btn" onclick="genOne('+r.id+')">Run</a></td></tr>';
                 }).join('');
-            } else { tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><p>No reports found</p></div></td></tr>'; }
+            } else { tb.innerHTML = '<tr><td colspan="7"><div class="empty-state"><p>No reports found</p></div></td></tr>'; }
         });
+}
+function generateReport() { alert('Generate Report: select options to generate a new report instance.'); }
+function genOne(id) {
+    if (!confirm('Generate report #' + id + '?')) return;
+    fetch('/api/reports/' + id + '/generate/', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json','X-CSRFToken':getCsrf()},
+        body: JSON.stringify({})
+    }).then(r => r.json()).then(function(d) {
+        if (d.success) { alert('Job submitted! Instance ID: ' + d.instance_id); loadReports(); }
+        else { alert('Failed: ' + (d.error || 'unknown')); }
+    });
 }
 function doSearch() { loadReports(); }
 function doReset() { document.getElementById('searchKeyword').value=''; document.getElementById('searchType').value=''; loadReports(); }
+function getCsrf() { var m = document.cookie.match(/csrftoken=([^;]+)/); return m ? m[1] : ''; }
 loadReports();
 </script>
 {% endblock %}

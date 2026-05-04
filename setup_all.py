@@ -98,7 +98,7 @@ mcat={}
 for cat in [('PCB_DSN','PCB Design'),('GERBER','Gerber'),('BOM','BOM'),('SPEC','Specifications'),('TEST_RPT','Test Reports'),('QC_REC','Quality Records')]:
     obj,_=MaterialCategory.objects.get_or_create(code=cat[0],defaults={'name':cat[1],'sort_order':1}); mcat[cat[0]]=obj
 admin=User.objects.get(username='admin'); zhangsan=User.objects.get(username='zhangsan')
-statuses=['draft','pending','pending','approved','approved','published','published','published','approved','approved','published','archived','draft','approved','published','published','approved','published','approved','draft']
+statuses=['unmade','making','making','completed','completed','audited','audited','audited','completed','completed','audited','archived','unmade','completed','audited','audited','completed','audited','completed','unmade']
 for i,s in enumerate(statuses,start=1):
     fid='SZ01' if i<=10 else ('SZ02' if i<=15 else 'DG01')
     Material.objects.get_or_create(serial_no=f'PCB-{i:04d}',defaults={'factory':fmap[fid],'material_no':f'PN-{6000+i}','version_code':f'V{1+(i%3)}.{i%5}','category':mcat[list(mcat.keys())[i%6]],'status':s,'creator':admin,'maker':zhangsan})

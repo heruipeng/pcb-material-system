@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block title %}{{ tool.name }} - Tool Detail{% endblock %}
+
+{% block content %}
+<div class="filter-card" style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">
+    <a href="/tools/" class="btn btn-default">&larr; Back</a>
+    <h3 style="margin:0;">{{ tool.name }}</h3>
+    <span class="tag" style="color:#409EFF;background:#ecf5ff;border:1px solid #b3d8ff;">{{ type_display }}</span>
+</div>
+
+<div class="filter-card">
+    <table style="width:100%;border-collapse:collapse;">
+        <tr><td style="padding:8px 16px;width:140px;color:#909399;font-weight:500;">Code</td><td style="padding:8px;">{{ tool.code }}</td></tr>
+        <tr style="background:#fafafa;"><td style="padding:8px 16px;color:#909399;font-weight:500;">Type</td><td style="padding:8px;">{{ type_display }}</td></tr>
+        <tr><td style="padding:8px 16px;color:#909399;font-weight:500;">Category</td><td style="padding:8px;">{{ tool.category.name|default:"-" }}</td></tr>
+        <tr style="background:#fafafa;"><td style="padding:8px 16px;color:#909399;font-weight:500;">Version</td><td style="padding:8px;">{{ tool.version }}</td></tr>
+        {% if tool.description %}
+        <tr><td style="padding:8px 16px;color:#909399;font-weight:500;">Description</td><td style="padding:8px;">{{ tool.description }}</td></tr>
+        {% endif %}
+        <tr style="background:#fafafa;"><td style="padding:8px 16px;color:#909399;font-weight:500;">Active</td><td style="padding:8px;">{{ tool.is_active|yesno:"Yes,No" }}</td></tr>
+        <tr><td style="padding:8px 16px;color:#909399;font-weight:500;">Created</td><td style="padding:8px;">{{ tool.created_at|date:"Y-m-d H:i" }}</td></tr>
+    </table>
+</div>
+
+{% if executions %}
+<div class="table-card" style="margin-top:16px;">
+    <div style="padding:14px 16px;font-weight:600;font-size:15px;border-bottom:1px solid #EBEEF5;">Recent Executions</div>
+    <table class="table">
+        <thead><tr><th>ID</th><th>Material</th><th>Status</th><th>Executor</th><th>Duration</th><th>Started</th></tr></thead>
+        <tbody>
+            {% for e in executions %}
+            <tr>
+                <td>{{ e.id }}</td>
+                <td>{{ e.material.serial_no }}</td>
+                <td><span class="tag">{{ e.get_status_display }}</span></td>
+                <td>{{ e.executor.username|default:"-" }}</td>
+                <td>{{ e.duration|default:"-" }}s</td>
+                <td>{{ e.started_at|date:"Y-m-d H:i"|default:"-" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endblock %}

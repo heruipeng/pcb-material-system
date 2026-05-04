@@ -6,7 +6,7 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
-from materials.views import material_list_page, dashboard_page, tool_list_page, report_list_page
+from materials.views import material_list_page, dashboard_page, tool_list_page, report_list_page, material_detail_page, tool_detail_page, report_detail_page
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -19,8 +19,11 @@ urlpatterns = [
     # 页面路由
     path('', dashboard_page, name='dashboard'),
     path('materials/', material_list_page, name='material-list'),
+    path('materials/<int:id>/', material_detail_page, name='material-detail'),
     path('tools/', tool_list_page, name='tool-list'),
+    path('tools/<int:id>/', tool_detail_page, name='tool-detail'),
     path('reports/', report_list_page, name='report-list'),
+    path('reports/<int:id>/', report_detail_page, name='report-detail'),
     path('login/', auth_views.LoginView.as_view(template_name='login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(next_page='/login/'), name='logout'),
 ]

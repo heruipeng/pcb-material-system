@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.core.paginator import Paginator
 from django.db.models import Count, Q
 from django.contrib.auth.decorators import login_required
@@ -31,7 +31,7 @@ def material_list_page(request):
     # 权限过滤
     user = request.user
     if user.role == 'viewer':
-        queryset = queryset.filter(status__in=['approved', 'rejected', 'published', 'archived'])
+        queryset = queryset.filter(status__in=['completed', 'audited', 'archived'])
     elif user.role == 'operator':
         queryset = queryset.filter(
             Q(creator=user) | Q(status__in=['completed', 'audited', 'archived'])
@@ -62,10 +62,10 @@ def material_list_page(request):
     # 状态统计
     status_counts = {
         'all': Material.objects.count(),
-        'draft': Material.objects.filter(status='draft').count(),
-        'pending': Material.objects.filter(status='pending').count(),
-        'approved': Material.objects.filter(status='approved').count(),
-        'published': Material.objects.filter(status='published').count(),
+        'unmade': Material.objects.filter(status='unmade').count(),
+        'making': Material.objects.filter(status='making').count(),
+        'completed': Material.objects.filter(status='completed').count(),
+        'audited': Material.objects.filter(status='audited').count(),
     }
     
     # 分页
@@ -92,6 +92,46 @@ def material_list_page(request):
 def dashboard_page(request):
     """仪表盘首页"""
     return render(request, 'dashboard.html', {})
+
+
+def material_detail_page(request, id):
+    """资料详情页面"""
+    material = get_object_or_404(Material.objects.select_related('factory', 'maker', 'creator', 'category'), pk=id)
+    histories = material.histories.all()[:20]
+    attachments = material.attachments.all()
+    context = {
+        'material': material,
+        'histories': histories,
+        'attachments': attachments,
+        'status_display': dict(Material.STATUS_CHOICES).get(material.status, material.status),
+    }
+    return render(request, 'materials/material_detail.html', context)
+
+
+def tool_detail_page(request, id):
+    """工具详情页面"""
+    from tools.models import Tool
+    tool = get_object_or_404(Tool.objects.select_related('category'), pk=id)
+    executions = tool.executions.select_related('material', 'executor').all()[:20]
+    context = {
+        'tool': tool,
+        'executions': executions,
+        'type_display': dict(Tool.TOOL_TYPE_CHOICES).get(tool.tool_type, tool.tool_type),
+    }
+    return render(request, 'tools/tool_detail.html', context)
+
+
+def report_detail_page(request, id):
+    """报表详情页面"""
+    from reports.models import Report
+    report = get_object_or_404(Report.objects.select_related('category', 'created_by'), pk=id)
+    instances = report.instances.select_related('generated_by').all()[:20]
+    context = {
+        'report': report,
+        'instances': instances,
+        'type_display': dict(Report.REPORT_TYPE_CHOICES).get(report.report_type, report.report_type),
+    }
+    return render(request, 'reports/report_detail.html', context)
 
 
 @login_required(login_url='/login/')
@@ -145,7 +185,7 @@ class MaterialViewSet(viewsets.ModelViewSet):
         # 权限过滤
         user = self.request.user
         if user.role == 'viewer':
-            queryset = queryset.filter(status__in=['approved', 'rejected', 'published', 'archived'])
+            queryset = queryset.filter(status__in=['completed', 'audited', 'archived'])
         elif user.role == 'operator':
             queryset = queryset.filter(
                 Q(creator=user) | Q(status__in=['completed', 'audited', 'archived'])
