@@ -60,16 +60,17 @@ print('  [OK] migration dirs ready')
 # ===== 4. Delete old DB + migrate =====
 print('\n[4/5] Database (MySQL)...')
 print('  [INFO] MySQL: 192.168.127.131:3306')
-# Auto-create database if not exists
+# 重建数据库（清除旧迁移记录）
 try:
     import pymysql
     conn = pymysql.connect(host='192.168.127.131', user='root', password='MyPassword123!@#', charset='utf8mb4', connect_timeout=10)
-    conn.cursor().execute('CREATE DATABASE IF NOT EXISTS test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci')
+    c = conn.cursor()
+    c.execute('DROP DATABASE IF EXISTS test')
+    c.execute('CREATE DATABASE test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci')
     conn.close()
-    print('  [OK] Database "test" ready')
+    print('  [OK] Database "test" recreated (old data cleared)')
 except Exception as e:
-    print(f'  [WARN] Could not create database: {e}')
-    print('  [WARN] Make sure MySQL is running and "test" database exists')
+    print(f'  [WARN] {e}')
 
 run('python manage.py makemigrations accounts materials tools reports core --noinput')
 run('python manage.py migrate')
