@@ -58,13 +58,20 @@ for app in ['accounts', 'materials', 'tools', 'reports', 'core']:
 print('  [OK] migration dirs ready')
 
 # ===== 4. Delete old DB + migrate =====
-print('\n[4/5] Database...')
-db = os.path.join(BASE, 'db.sqlite3')
-if os.path.exists(db):
-    os.remove(db)
-    print('  [OK] old db.sqlite3 deleted')
+print('\n[4/5] Database (MySQL)...')
+print('  [INFO] MySQL: 192.168.127.131:3306')
+# Auto-create database if not exists
+try:
+    import pymysql
+    conn = pymysql.connect(host='192.168.127.131', user='root', password='MyPassword123!@#', charset='utf8mb4')
+    conn.cursor().execute('CREATE DATABASE IF NOT EXISTS test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci')
+    conn.close()
+    print('  [OK] Database "test" ready')
+except Exception as e:
+    print(f'  [WARN] Could not create database: {e}')
+    print('  [WARN] Make sure MySQL is running and "test" database exists')
 
-run('python manage.py makemigrations accounts materials tools reports core')
+run('python manage.py makemigrations accounts materials tools reports core --noinput')
 run('python manage.py migrate')
 
 # ===== 5. Seed data =====
