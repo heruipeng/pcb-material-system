@@ -1,6 +1,7 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.core.paginator import Paginator
 from django.db.models import Count, Q
+from django.contrib.auth.decorators import login_required
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -22,6 +23,7 @@ from accounts.permissions import (
 from core.utils import log_operation
 
 
+@login_required(login_url='/login/')
 def material_list_page(request):
     """资料总纲页面"""
     queryset = Material.objects.select_related('factory', 'maker', 'creator').all()
@@ -86,11 +88,13 @@ def material_list_page(request):
     return render(request, 'materials/material_list.html', context)
 
 
+@login_required(login_url='/login/')
 def dashboard_page(request):
     """仪表盘首页"""
     return render(request, 'dashboard.html', {})
 
 
+@login_required(login_url='/login/')
 def tool_list_page(request):
     """工具输出页面"""
     from tools.models import ToolExecution
@@ -105,6 +109,7 @@ def tool_list_page(request):
     return render(request, 'tools/tool_list.html', {'tools': tools})
 
 
+@login_required(login_url='/login/')
 def report_list_page(request):
     """报表管理页面"""
     return render(request, 'reports/report_list.html', {})
