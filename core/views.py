@@ -317,3 +317,42 @@ def system_settings(request):
         'log_stats': log_stats,
         'system_info': system_info,
     })
+
+
+# ===== 自定义登录视图 =====
+from django.contrib.auth import authenticate, login
+from django.contrib.auth.views import LoginView
+from django.contrib.auth.forms import AuthenticationForm
+
+
+class CustomLoginView(LoginView):
+    """自定义登录视图 - 区分密码错误和账号停用"""
+    template_name = 'login.html'
+
+    def form_invalid(self, form):
+        """重写错误处理，区分停用和密码错误"""
+        username = form.data.get('username', '')
+        if username:
+            from accounts.models import User
+            try:
+                user = User.objects.get(username=username)
+                if not user.is_active:
+                    # 清掉默认错误，显示停用提示
+                    form._errors.clear()
+                    form.add_error(None, '该账号已被停用，请联系管理员')
+                    return self.render_to_response(self.get_context_data(form=form))
+                elif not user.check_password(form.data.get('password', '')):
+                    form._errors.clear()
+                    form.add_error(None, '密码错误，请重新输入')
+                    return self.render_to_response(self.get_context_data(form=form))
+                else:
+                    form._errors.clear()
+                    form.add_error(None, '登录失败，请重试')
+                    return self.render_to_response(self.get_context_data(form=form))
+            except User.DoesNotExist:
+                form._errors.clear()
+                form.add_error(None, '用户名不存在')
+                return self.render_to_response(self.get_context_data(form=form))
+        form._errors.clear()
+        form.add_error(None, '用户名或密码错误')
+        return self.render_to_response(self.get_context_data(form=form))

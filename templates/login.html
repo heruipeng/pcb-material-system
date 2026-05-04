@@ -50,7 +50,11 @@
         <p class="subtitle">V2.0</p>
         
         {% if form.errors %}
-        <div class="error-msg">用户名或密码错误</div>
+        <div class="error-msg">
+            {% for error in form.non_field_errors %}
+                {{ error }}
+            {% endfor %}
+        </div>
         {% endif %}
         
         <form method="post">
