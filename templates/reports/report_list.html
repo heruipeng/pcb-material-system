@@ -1,315 +1,201 @@
 {% extends 'base.html' %}
-
-{% block title %}报表管理 - PCB工程资料管理系统{% endblock %}
-
-{% block breadcrumb %}
-<li class="breadcrumb-item active">报表管理</li>
-{% endblock %}
+{% block title %}报表管理 - 飞针测试资料管理系统 V2.0{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <!-- 报表统计 -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="stat-card">
-                <div class="stat-icon bg-primary bg-opacity-10 text-primary">
-                    <i class="fas fa-file-alt"></i>
-                </div>
-                <div class="stat-value" id="reportTotal">0</div>
-                <div class="stat-label">报表总数</div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card">
-                <div class="stat-icon bg-success bg-opacity-10 text-success">
-                    <i class="fas fa-download"></i>
-                </div>
-                <div class="stat-value" id="todayGenerated">0</div>
-                <div class="stat-label">今日生成</div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card">
-                <div class="stat-icon bg-info bg-opacity-10 text-info">
-                    <i class="fas fa-calendar-week"></i>
-                </div>
-                <div class="stat-value" id="weekGenerated">0</div>
-                <div class="stat-label">本周生成</div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card">
-                <div class="stat-icon bg-warning bg-opacity-10 text-warning">
-                    <i class="fas fa-clock"></i>
-                </div>
-                <div class="stat-value" id="scheduledTotal">0</div>
-                <div class="stat-label">定时任务</div>
-            </div>
-        </div>
+<!-- 统计条 -->
+<div class="filter-card" style="display:flex;gap:20px;">
+    <div style="flex:1;text-align:center;padding:16px;border-right:1px solid #EBEEF5;">
+        <div style="font-size:28px;font-weight:700;color:#409EFF;" id="rptTotal">-</div>
+        <div style="color:#909399;font-size:12px;">报表总数</div>
     </div>
-
-    <!-- 报表分类 -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <i class="fas fa-th-list"></i> 报表分类
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-2">
-                            <a href="/reports/?type=summary" class="text-decoration-none">
-                                <div class="card text-center h-100">
-                                    <div class="card-body">
-                                        <i class="fas fa-list-alt fa-2x text-primary mb-2"></i>
-                                        <h6>汇总报表</h6>
-                                    </div>
-                                </div>
-                            </a>
-                        </div>
-                        <div class="col-md-2">
-                            <a href="/reports/?type=detail" class="text-decoration-none">
-                                <div class="card text-center h-100">
-                                    <div class="card-body">
-                                        <i class="fas fa-table fa-2x text-success mb-2"></i>
-                                        <h6>明细报表</h6>
-                                    </div>
-                                </div>
-                            </a>
-                        </div>
-                        <div class="col-md-2">
-                            <a href="/reports/?type=statistical" class="text-decoration-none">
-                                <div class="card text-center h-100">
-                                    <div class="card-body">
-                                        <i class="fas fa-chart-pie fa-2x text-info mb-2"></i>
-                                        <h6>统计报表</h6>
-                                    </div>
-                                </div>
-                            </a>
-                        </div>
-                        <div class="col-md-2">
-                            <a href="/reports/?type=analysis" class="text-decoration-none">
-                                <div class="card text-center h-100">
-                                    <div class="card-body">
-                                        <i class="fas fa-chart-line fa-2x text-warning mb-2"></i>
-                                        <h6>分析报表</h6>
-                                    </div>
-                                </div>
-                            </a>
-                        </div>
-                        <div class="col-md-2">
-                            <a href="/reports/?type=custom" class="text-decoration-none">
-                                <div class="card text-center h-100">
-                                    <div class="card-body">
-                                        <i class="fas fa-cog fa-2x text-secondary mb-2"></i>
-                                        <h6>自定义报表</h6>
-                                    </div>
-                                </div>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div style="flex:1;text-align:center;padding:16px;border-right:1px solid #EBEEF5;">
+        <div style="font-size:28px;font-weight:700;color:#67C23A;" id="rptToday">-</div>
+        <div style="color:#909399;font-size:12px;">今日生成</div>
     </div>
-
-    <!-- 报表列表 -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <span><i class="fas fa-file-alt"></i> 报表列表</span>
-                    {% if user.has_permission 'report.create' %}
-                    <a href="/reports/create/" class="btn btn-sm btn-success">
-                        <i class="fas fa-plus"></i> 新建报表
-                    </a>
-                    {% endif %}
-                </div>
-                <div class="card-body p-0">
-                    <table class="table table-hover mb-0">
-                        <thead>
-                            <tr>
-                                <th>报表名称</th>
-                                <th>类型</th>
-                                <th>分类</th>
-                                <th>描述</th>
-                                <th>创建人</th>
-                                <th>更新时间</th>
-                                <th>操作</th>
-                            </tr>
-                        </thead>
-                        <tbody id="reportList">
-                            <tr>
-                                <td colspan="7" class="text-center text-muted py-3">加载中...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+    <div style="flex:1;text-align:center;padding:16px;border-right:1px solid #EBEEF5;">
+        <div style="font-size:28px;font-weight:700;color:#E6A23C;" id="rptWeek">-</div>
+        <div style="color:#909399;font-size:12px;">本周生成</div>
     </div>
-
-    <!-- 最近生成的报表 -->
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <span><i class="fas fa-history"></i> 最近生成</span>
-                    <a href="/reports/instances/" class="btn btn-sm btn-outline-primary">查看全部</a>
-                </div>
-                <div class="card-body p-0">
-                    <table class="table table-hover mb-0">
-                        <thead>
-                            <tr>
-                                <th>报表名称</th>
-                                <th>实例名称</th>
-                                <th>状态</th>
-                                <th>数据行数</th>
-                                <th>生成人</th>
-                                <th>生成时间</th>
-                                <th>操作</th>
-                            </tr>
-                        </thead>
-                        <tbody id="recentInstances">
-                            <tr>
-                                <td colspan="7" class="text-center text-muted py-3">加载中...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+    <div style="flex:1;text-align:center;padding:16px;border-right:1px solid #EBEEF5;">
+        <div style="font-size:28px;font-weight:700;color:#409EFF;" id="rptMonth">-</div>
+        <div style="color:#909399;font-size:12px;">本月生成</div>
+    </div>
+    <div style="flex:1;text-align:center;padding:16px;">
+        <div style="font-size:28px;font-weight:700;color:#F56C6C;" id="rptScheduled">-</div>
+        <div style="color:#909399;font-size:12px;">定时任务</div>
     </div>
 </div>
 
-<script>
-// 加载报表统计
-function loadReportStats() {
-    fetch('/api/reports/statistics/')
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById('reportTotal').textContent = data.total_count || 0;
-            document.getElementById('todayGenerated').textContent = data.today_count || 0;
-            document.getElementById('weekGenerated').textContent = data.week_count || 0;
-        })
-        .catch(error => console.error('加载报表统计失败:', error));
-}
+<!-- 筛选区 -->
+<div class="filter-card">
+    <div class="filter-row">
+        <div class="filter-item">
+            <label>关键字：</label>
+            <input type="text" id="searchKeyword" placeholder="报表名称">
+        </div>
+        <div class="filter-item">
+            <label>报表类型：</label>
+            <select id="searchType">
+                <option value="">全部类型</option>
+                <option value="summary">汇总报表</option>
+                <option value="detail">明细报表</option>
+                <option value="statistical">统计报表</option>
+                <option value="analysis">分析报表</option>
+                <option value="custom">自定义报表</option>
+            </select>
+        </div>
+        <div class="filter-item">
+            <label>日期：</label>
+            <input type="date" id="searchDate">
+        </div>
+        <button class="btn btn-primary" onclick="doSearch()"><i class="fas fa-search"></i> 查询</button>
+        <button class="btn btn-default" onclick="doReset()"><i class="fas fa-redo"></i> 重置</button>
+        <button class="btn btn-success" onclick="generateNew()"><i class="fas fa-plus"></i> 生成报表</button>
+    </div>
+</div>
 
-// 加载报表列表
+<!-- 报表列表 -->
+<div class="table-card">
+    <div style="padding:14px 16px;font-weight:600;font-size:15px;border-bottom:1px solid #EBEEF5;">
+        <i class="fas fa-file-alt" style="color:#409EFF;"></i> 报表列表
+    </div>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>报表名称</th>
+                <th style="width:100px;">类型</th>
+                <th style="width:100px;">分类</th>
+                <th>描述</th>
+                <th style="width:100px;">创建人</th>
+                <th style="width:150px;">更新时间</th>
+                <th style="width:150px;">操作</th>
+            </tr>
+        </thead>
+        <tbody id="reportTable">
+            <tr><td colspan="7"><div class="empty-state"><p>加载中...</p></div></td></tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- 最近生成的报表 -->
+<div class="table-card" style="margin-top:16px;">
+    <div style="padding:14px 16px;font-weight:600;font-size:15px;border-bottom:1px solid #EBEEF5;">
+        <i class="fas fa-history" style="color:#E6A23C;"></i> 最近生成记录
+    </div>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>报表名称</th>
+                <th>实例名称</th>
+                <th style="width:90px;">状态</th>
+                <th style="width:80px;">行数</th>
+                <th style="width:100px;">生成人</th>
+                <th style="width:160px;">生成时间</th>
+                <th style="width:80px;">操作</th>
+            </tr>
+        </thead>
+        <tbody id="instanceTable">
+            <tr><td colspan="7"><div class="empty-state"><p>加载中...</p></div></td></tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
 function loadReports() {
-    fetch('/api/reports/?page_size=10')
-        .then(response => response.json())
-        .then(data => {
-            const tbody = document.getElementById('reportList');
-            if (data.results && data.results.length > 0) {
-                tbody.innerHTML = data.results.map(r => `
+    const params = new URLSearchParams();
+    const kw = document.getElementById('searchKeyword').value.trim();
+    const type = document.getElementById('searchType').value;
+    if (kw) params.set('search', kw);
+    if (type) params.set('report_type', type);
+    
+    fetch('/api/reports/?' + params.toString())
+        .then(r => r.json())
+        .then(d => {
+            const tbody = document.getElementById('reportTable');
+            if (d.results?.length) {
+                tbody.innerHTML = d.results.map(r => `
                     <tr>
-                        <td>${r.name}</td>
-                        <td><span class="badge bg-primary">${r.report_type_display}</span></td>
+                        <td><strong>${r.name}</strong></td>
+                        <td><span class="tag" style="color:#409EFF;background:#ecf5ff;border:1px solid #b3d8ff;">${r.report_type_display || r.report_type}</span></td>
                         <td>${r.category_name || '-'}</td>
-                        <td>${r.description || '-'}</td>
+                        <td style="color:#909399;">${r.description || '-'}</td>
                         <td>${r.created_by_name || '-'}</td>
                         <td>${new Date(r.updated_at).toLocaleString('zh-CN')}</td>
                         <td>
-                            <div class="btn-group btn-group-sm">
-                                <button class="btn btn-success" onclick="generateReport(${r.id})">
-                                    <i class="fas fa-play"></i> 生成
-                                </button>
-                                <a href="/reports/${r.id}/" class="btn btn-outline-primary">详情</a>
-                            </div>
+                            <button class="btn btn-primary btn-sm" onclick="generateReport(${r.id})"><i class="fas fa-play"></i> 生成</button>
+                            <a href="/reports/${r.id}/" class="link-btn">详情</a>
                         </td>
                     </tr>
                 `).join('');
             } else {
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">暂无报表</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><i class="fas fa-inbox"></i><p>暂无报表</p></div></td></tr>';
             }
-        })
-        .catch(error => console.error('加载报表列表失败:', error));
+        });
 }
 
-// 加载最近生成的报表
-function loadRecentInstances() {
-    fetch('/api/reports/instances/?page_size=5')
-        .then(response => response.json())
-        .then(data => {
-            const tbody = document.getElementById('recentInstances');
-            if (data.results && data.results.length > 0) {
-                tbody.innerHTML = data.results.map(i => `
+function loadInstances() {
+    fetch('/api/reports/instances/?page_size=6')
+        .then(r => r.json())
+        .then(d => {
+            const tbody = document.getElementById('instanceTable');
+            if (d.results?.length) {
+                const colors = {pending:'#E6A23C',completed:'#67C23A',failed:'#F56C6C'};
+                tbody.innerHTML = d.results.map(i => `
                     <tr>
                         <td>${i.report_name}</td>
                         <td>${i.name}</td>
-                        <td><span class="badge bg-${getStatusColor(i.status)}">${i.status_display}</span></td>
+                        <td><span class="tag" style="color:${colors[i.status]};background:${colors[i.status]}15;border:1px solid ${colors[i.status]}50;">${i.status_display || i.status}</span></td>
                         <td>${i.row_count || 0}</td>
                         <td>${i.generated_by_name || '-'}</td>
                         <td>${new Date(i.generated_at).toLocaleString('zh-CN')}</td>
-                        <td>
-                            ${i.file_url ? `<a href="${i.file_url}" class="btn btn-sm btn-outline-primary" download>下载</a>` : '-'}
-                        </td>
+                        <td>${i.file_url ? '<a href="'+i.file_url+'" class="link-btn" download>下载</a>' : '-'}</td>
                     </tr>
                 `).join('');
             } else {
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">暂无生成记录</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><i class="fas fa-inbox"></i><p>暂无生成记录</p></div></td></tr>';
             }
-        })
-        .catch(error => console.error('加载生成记录失败:', error));
+        });
 }
 
-// 生成报表
-function generateReport(reportId) {
-    if (!confirm('确定要生成此报表吗？')) return;
-    
-    fetch(`/api/reports/${reportId}/generate/`, {
+function loadStats() {
+    fetch('/api/reports/statistics/')
+        .then(r => r.json())
+        .then(d => {
+            document.getElementById('rptTotal').textContent = d.total_count || 0;
+            document.getElementById('rptToday').textContent = d.today_count || 0;
+            document.getElementById('rptWeek').textContent = d.week_count || 0;
+            document.getElementById('rptMonth').textContent = d.month_count || 0;
+            document.getElementById('rptScheduled').textContent = 0;
+        });
+}
+
+function generateReport(id) {
+    if (!confirm('确定生成此报表？')) return;
+    fetch('/api/reports/' + id + '/generate/', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken')
-        },
+        headers: {'Content-Type':'application/json','X-CSRFToken':getCsrf()},
         body: JSON.stringify({})
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert('报表生成任务已提交！');
-            loadRecentInstances();
-        } else {
-            alert('生成失败：' + (data.error || '未知错误'));
-        }
-    })
-    .catch(error => {
-        console.error('生成报表失败:', error);
-        alert('生成失败');
+    }).then(r => r.json()).then(d => {
+        alert(d.success ? '生成任务已提交！' : '生成失败');
+        loadInstances();
     });
 }
 
-function getStatusColor(status) {
-    const colors = {
-        'pending': 'warning',
-        'completed': 'success',
-        'failed': 'danger'
-    };
-    return colors[status] || 'secondary';
+function generateNew() {
+    alert('报表生成功能 - 选择报表类型和日期后生成');
 }
 
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
+function doSearch() { loadReports(); loadInstances(); }
+function doReset() {
+    ['searchKeyword','searchType','searchDate'].forEach(id => document.getElementById(id).value='');
+    loadReports(); loadInstances();
 }
 
-// 页面加载完成后初始化
-document.addEventListener('DOMContentLoaded', function() {
-    loadReportStats();
-    loadReports();
-    loadRecentInstances();
-});
+function getCsrf() {
+    const m = document.cookie.match(/csrftoken=([^;]+)/);
+    return m ? m[1] : '';
+}
+
+loadStats(); loadReports(); loadInstances();
 </script>
 {% endblock %}
