@@ -1,0 +1,191 @@
+{% extends 'base.html' %}
+
+{% block title %}首页 - PCB工程资料管理系统{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- 统计卡片 -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-icon bg-primary bg-opacity-10 text-primary">
+                    <i class="fas fa-folder-open"></i>
+                </div>
+                <div class="stat-value" id="materialTotal">0</div>
+                <div class="stat-label">资料总数</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-icon bg-success bg-opacity-10 text-success">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="stat-value" id="completedTotal">0</div>
+                <div class="stat-label">已完成</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-icon bg-warning bg-opacity-10 text-warning">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="stat-value" id="pendingTotal">0</div>
+                <div class="stat-label">待处理</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-icon bg-info bg-opacity-10 text-info">
+                    <i class="fas fa-tools"></i>
+                </div>
+                <div class="stat-value" id="toolTotal">0</div>
+                <div class="stat-label">工具执行</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 快捷操作 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-bolt"></i> 快捷操作
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-2">
+                            <a href="/materials/create/" class="btn btn-success w-100">
+                                <i class="fas fa-plus"></i> 新建资料
+                            </a>
+                        </div>
+                        <div class="col-md-2">
+                            <a href="/tools/" class="btn btn-primary w-100">
+                                <i class="fas fa-cog"></i> 工具输出
+                            </a>
+                        </div>
+                        <div class="col-md-2">
+                            <a href="/reports/" class="btn btn-info w-100">
+                                <i class="fas fa-chart-bar"></i> 生成报表
+                            </a>
+                        </div>
+                        <div class="col-md-2">
+                            <a href="/materials/" class="btn btn-outline-primary w-100">
+                                <i class="fas fa-list"></i> 资料列表
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 最近资料和待办 -->
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-history"></i> 最近资料</span>
+                    <a href="/materials/" class="btn btn-sm btn-outline-primary">查看全部</a>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>流水号</th>
+                                <th>料号</th>
+                                <th>版本</th>
+                                <th>状态</th>
+                                <th>创建时间</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recentMaterials">
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-3">加载中...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-bell"></i> 待办事项
+                </div>
+                <div class="card-body" id="todoList">
+                    <div class="text-center text-muted py-3">加载中...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 加载仪表盘数据
+function loadDashboardStats() {
+    fetch('/api/core/dashboard-stats/')
+        .then(response => response.json())
+        .then(data => {
+            // 更新统计卡片
+            document.getElementById('materialTotal').textContent = data.material_stats?.total || 0;
+            document.getElementById('completedTotal').textContent = data.material_stats?.month || 0;
+            document.getElementById('pendingTotal').textContent = data.material_stats?.pending || 0;
+            document.getElementById('toolTotal').textContent = data.tool_stats?.total || 0;
+        })
+        .catch(error => console.error('加载统计数据失败:', error));
+}
+
+// 加载最近资料
+function loadRecentMaterials() {
+    fetch('/api/materials/?page_size=5&ordering=-created_at')
+        .then(response => response.json())
+        .then(data => {
+            const tbody = document.getElementById('recentMaterials');
+            if (data.results && data.results.length > 0) {
+                tbody.innerHTML = data.results.map(m => `
+                    <tr>
+                        <td>${m.serial_no}</td>
+                        <td>${m.material_no}</td>
+                        <td>${m.version_code}</td>
+                        <td><span class="status-badge status-${m.status}">${m.status_display}</span></td>
+                        <td>${new Date(m.created_at).toLocaleString('zh-CN')}</td>
+                    </tr>
+                `).join('');
+            } else {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">暂无数据</td></tr>';
+            }
+        })
+        .catch(error => console.error('加载最近资料失败:', error));
+}
+
+// 加载待办事项
+function loadTodoList() {
+    fetch('/api/materials/?status=pending&page_size=5')
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('todoList');
+            if (data.results && data.results.length > 0) {
+                container.innerHTML = data.results.map(m => `
+                    <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-light rounded">
+                        <div>
+                            <div class="fw-bold">${m.serial_no}</div>
+                            <small class="text-muted">${m.material_no}</small>
+                        </div>
+                        <a href="/materials/${m.id}/" class="btn btn-sm btn-outline-primary">处理</a>
+                    </div>
+                `).join('');
+            } else {
+                container.innerHTML = '<div class="text-center text-muted py-3">暂无待办事项</div>';
+            }
+        })
+        .catch(error => console.error('加载待办事项失败:', error));
+}
+
+// 页面加载完成后初始化
+document.addEventListener('DOMContentLoaded', function() {
+    loadDashboardStats();
+    loadRecentMaterials();
+    loadTodoList();
+});
+</script>
+{% endblock %}

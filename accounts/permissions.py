@@ -1,0 +1,70 @@
+"""
+权限配置
+定义每个角色拥有的权限
+"""
+
+# 权限代码定义
+PERM_MATERIAL_VIEW = 'material.view'
+PERM_MATERIAL_CREATE = 'material.create'
+PERM_MATERIAL_EDIT = 'material.edit'
+PERM_MATERIAL_DELETE = 'material.delete'
+PERM_MATERIAL_APPROVE = 'material.approve'
+
+PERM_TOOL_USE = 'tool.use'
+PERM_TOOL_CONFIG = 'tool.config'
+
+PERM_REPORT_VIEW = 'report.view'
+PERM_REPORT_EXPORT = 'report.export'
+PERM_REPORT_CREATE = 'report.create'
+
+PERM_USER_MANAGE = 'user.manage'
+PERM_ROLE_MANAGE = 'role.manage'
+PERM_SYSTEM_CONFIG = 'system.config'
+
+# 角色权限映射
+PERMISSIONS = {
+    'admin': [
+        PERM_MATERIAL_VIEW, PERM_MATERIAL_CREATE, PERM_MATERIAL_EDIT, 
+        PERM_MATERIAL_DELETE, PERM_MATERIAL_APPROVE,
+        PERM_TOOL_USE, PERM_TOOL_CONFIG,
+        PERM_REPORT_VIEW, PERM_REPORT_EXPORT, PERM_REPORT_CREATE,
+        PERM_USER_MANAGE, PERM_ROLE_MANAGE, PERM_SYSTEM_CONFIG,
+    ],
+    'manager': [
+        PERM_MATERIAL_VIEW, PERM_MATERIAL_CREATE, PERM_MATERIAL_EDIT,
+        PERM_MATERIAL_APPROVE,
+        PERM_TOOL_USE, PERM_TOOL_CONFIG,
+        PERM_REPORT_VIEW, PERM_REPORT_EXPORT, PERM_REPORT_CREATE,
+    ],
+    'engineer': [
+        PERM_MATERIAL_VIEW, PERM_MATERIAL_CREATE, PERM_MATERIAL_EDIT,
+        PERM_TOOL_USE,
+        PERM_REPORT_VIEW, PERM_REPORT_EXPORT,
+    ],
+    'operator': [
+        PERM_MATERIAL_VIEW, PERM_MATERIAL_CREATE,
+        PERM_TOOL_USE,
+        PERM_REPORT_VIEW,
+    ],
+    'viewer': [
+        PERM_MATERIAL_VIEW,
+        PERM_REPORT_VIEW,
+    ],
+}
+
+# 权限中文名称
+PERMISSION_NAMES = {
+    PERM_MATERIAL_VIEW: '查看资料',
+    PERM_MATERIAL_CREATE: '创建资料',
+    PERM_MATERIAL_EDIT: '编辑资料',
+    PERM_MATERIAL_DELETE: '删除资料',
+    PERM_MATERIAL_APPROVE: '审批资料',
+    PERM_TOOL_USE: '使用工具',
+    PERM_TOOL_CONFIG: '配置工具',
+    PERM_REPORT_VIEW: '查看报表',
+    PERM_REPORT_EXPORT: '导出报表',
+    PERM_REPORT_CREATE: '创建报表',
+    PERM_USER_MANAGE: '用户管理',
+    PERM_ROLE_MANAGE: '角色管理',
+    PERM_SYSTEM_CONFIG: '系统配置',
+}
