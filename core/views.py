@@ -1,3 +1,6 @@
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 from rest_framework import viewsets, status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
@@ -183,4 +186,131 @@ def system_info(request):
         'django_version': django.get_version(),
         'python_version': sys.version,
         'timezone': str(timezone.get_current_timezone()),
+    })
+
+
+# ===== 用户管理页面 =====
+@login_required(login_url='/login/')
+def manage_users(request):
+    """用户管理 - V2.0 风格页面"""
+    from accounts.models import User, Permission, RolePermission
+    from core.models import Factory
+
+    factories = Factory.objects.filter(is_active=True)
+
+    if request.method == 'POST':
+        action = request.POST.get('action', '')
+        if action == 'create':
+            username = request.POST.get('username', '').strip()
+            password = request.POST.get('password', '')
+            role = request.POST.get('role', 'viewer')
+            department = request.POST.get('department', '')
+            factory_id = request.POST.get('factory', '') or None
+            is_staff = request.POST.get('is_staff') == 'on'
+
+            if User.objects.filter(username=username).exists():
+                messages.error(request, f'用户名 {username} 已存在')
+            else:
+                user = User.objects.create(
+                    username=username, role=role,
+                    department=department, factory_id=factory_id,
+                    is_staff=is_staff
+                )
+                user.set_password(password)
+                user.save()
+                messages.success(request, f'用户 {username} 创建成功')
+
+        elif action == 'edit':
+            user_id = request.POST.get('user_id')
+            user = get_object_or_404(User, pk=user_id)
+            user.role = request.POST.get('role', user.role)
+            user.department = request.POST.get('department', user.department)
+            user.factory_id = request.POST.get('factory') or None
+            user.is_staff = request.POST.get('is_staff') == 'on'
+            user.is_active = request.POST.get('is_active') == 'on'
+            new_pw = request.POST.get('password', '')
+            if new_pw:
+                user.set_password(new_pw)
+            user.save()
+            messages.success(request, f'用户 {user.username} 已更新')
+
+        elif action == 'delete':
+            user_id = request.POST.get('user_id')
+            user = get_object_or_404(User, pk=user_id)
+            if user.username == 'admin':
+                messages.error(request, '不能删除超级管理员')
+            else:
+                uname = user.username
+                user.delete()
+                messages.success(request, f'用户 {uname} 已删除')
+
+        elif action == 'toggle_active':
+            user_id = request.POST.get('user_id')
+            user = get_object_or_404(User, pk=user_id)
+            user.is_active = not user.is_active
+            user.save()
+            st = '启用' if user.is_active else '停用'
+            messages.success(request, f'用户 {user.username} 已{st}')
+
+        return redirect('manage-users')
+
+    users = User.objects.select_related('factory').all().order_by('-created_at')
+    return render(request, 'core/manage_users.html', {
+        'users': users,
+        'factories': factories,
+        'role_choices': User.ROLE_CHOICES,
+    })
+
+
+# ===== 系统设置页面 =====
+@login_required(login_url='/login/')
+def system_settings(request):
+    """系统设置 - V2.0 风格页面"""
+    from core.models import SystemConfig, OperationLog
+    from django.db.models import Count
+
+    if request.method == 'POST':
+        action = request.POST.get('action', '')
+        if action == 'save_config':
+            key = request.POST.get('key', '').strip()
+            value = request.POST.get('value', '')
+            desc = request.POST.get('description', '')
+            SystemConfig.objects.update_or_create(
+                key=key,
+                defaults={'value': value, 'description': desc}
+            )
+            messages.success(request, f'配置 {key} 已保存')
+        elif action == 'delete_config':
+            key = request.POST.get('key', '')
+            SystemConfig.objects.filter(key=key).delete()
+            messages.success(request, f'配置 {key} 已删除')
+
+        return redirect('system-settings')
+
+    configs = SystemConfig.objects.all().order_by('key')
+
+    # 最近 50 条操作日志
+    logs = OperationLog.objects.select_related('user').all().order_by('-created_at')[:50]
+
+    # 日志统计
+    today = timezone.now().date()
+    log_stats = {
+        'total': OperationLog.objects.count(),
+        'today': OperationLog.objects.filter(created_at__date=today).count(),
+        'by_module': list(OperationLog.objects.values('module').annotate(c=Count('id')).order_by('-c')[:10]),
+    }
+
+    import django, sys, platform
+    system_info = {
+        'django': django.get_version(),
+        'python': sys.version.split()[0],
+        'os': platform.platform(),
+        'db': 'MySQL (192.168.127.131)',
+    }
+
+    return render(request, 'core/system_settings.html', {
+        'configs': configs,
+        'logs': logs,
+        'log_stats': log_stats,
+        'system_info': system_info,
     })

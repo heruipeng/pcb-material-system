@@ -7,6 +7,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
 from materials.views import material_list_page, dashboard_page, tool_list_page, report_list_page, material_detail_page, tool_detail_page, report_detail_page
+from core.views import manage_users, system_settings
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -24,6 +25,8 @@ urlpatterns = [
     path('tools/<int:id>/', tool_detail_page, name='tool-detail'),
     path('reports/', report_list_page, name='report-list'),
     path('reports/<int:id>/', report_detail_page, name='report-detail'),
+    path('users/', manage_users, name='manage-users'),
+    path('system/', system_settings, name='system-settings'),
     path('login/', auth_views.LoginView.as_view(template_name='login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(next_page='/login/'), name='logout'),
 ]

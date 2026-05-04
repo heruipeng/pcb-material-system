@@ -1,0 +1,200 @@
+{% extends 'base.html' %}
+{% block title %}用户管理{% endblock %}
+
+{% block content %}
+<!-- 顶部操作栏 -->
+<div class="filter-card" style="display:flex;align-items:center;justify-content:space-between;">
+    <h3 style="margin:0;font-size:16px;color:#303133;">
+        <i class="fas fa-users" style="color:#409EFF;"></i> 用户管理
+        <span style="font-size:13px;color:#909399;font-weight:normal;">（共 {{ users|length }} 人）</span>
+    </h3>
+    <button class="btn btn-primary" onclick="showCreateForm()">
+        <i class="fas fa-plus"></i> 新建用户
+    </button>
+</div>
+
+<!-- 消息提示 -->
+{% if messages %}
+<div style="margin-bottom:12px;">
+    {% for msg in messages %}
+    <div style="padding:10px 16px;border-radius:4px;font-size:13px;
+        {% if msg.tags == 'error' %}background:#fef0f0;color:#F56C6C;border:1px solid #fde2e2;
+        {% else %}background:#f0f9eb;color:#67C23A;border:1px solid #e1f3d8;{% endif %}">
+        {{ msg }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- 用户表格 -->
+<div class="table-card">
+    <table class="table">
+        <thead>
+            <tr>
+                <th style="width:130px;">用户名</th>
+                <th style="width:100px;">角色</th>
+                <th style="width:120px;">部门</th>
+                <th style="width:120px;">所属工厂</th>
+                <th style="width:80px;">状态</th>
+                <th style="width:80px;">管理员</th>
+                <th style="width:140px;">创建时间</th>
+                <th style="width:160px;">操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for u in users %}
+            <tr>
+                <td><strong>{{ u.username }}</strong></td>
+                <td><span class="tag" style="color:#409EFF;background:#ecf5ff;border:1px solid #b3d8ff;">{{ u.get_role_display }}</span></td>
+                <td>{{ u.department|default:"-" }}</td>
+                <td>{{ u.factory.name|default:"-" }}</td>
+                <td>
+                    {% if u.is_active %}
+                    <span style="color:#67C23A;">● 正常</span>
+                    {% else %}
+                    <span style="color:#F56C6C;">● 停用</span>
+                    {% endif %}
+                </td>
+                <td>{{ u.is_staff|yesno:"是,否" }}</td>
+                <td>{{ u.created_at|date:"Y-m-d H:i" }}</td>
+                <td>
+                    <a href="javascript:void(0)" class="link-btn" onclick="editUser('{{ u.id }}', '{{ u.username }}', '{{ u.role }}', '{{ u.department }}', '{{ u.factory_id|default:'' }}', {{ u.is_staff|lower }}, {{ u.is_active|lower }})">编辑</a>
+                    {% if u.is_active %}
+                    <a href="javascript:void(0)" class="link-btn" style="color:#E6A23C;" onclick="toggleUser('{{ u.id }}', 'disable')">停用</a>
+                    {% else %}
+                    <a href="javascript:void(0)" class="link-btn" style="color:#67C23A;" onclick="toggleUser('{{ u.id }}', 'enable')">启用</a>
+                    {% endif %}
+                    {% if u.username != 'admin' %}
+                    <a href="javascript:void(0)" class="link-btn" style="color:#F56C6C;" onclick="deleteUser('{{ u.id }}', '{{ u.username }}')">删除</a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="8"><div class="empty-state"><p>暂无用户</p></div></td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- 新建/编辑弹窗 -->
+<div id="userModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);z-index:1000;align-items:center;justify-content:center;">
+    <div style="background:#fff;border-radius:8px;width:480px;padding:0;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+        <div style="padding:16px 20px;border-bottom:1px solid #EBEEF5;display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-weight:600;font-size:16px;" id="modalTitle">新建用户</span>
+            <a href="javascript:void(0)" style="color:#909399;font-size:18px;" onclick="closeModal()">&times;</a>
+        </div>
+        <form method="post" style="padding:20px;">
+            {% csrf_token %}
+            <input type="hidden" name="action" id="formAction" value="create">
+            <input type="hidden" name="user_id" id="formUserId" value="">
+            <div class="filter-item" style="margin-bottom:12px;">
+                <label>用户名：</label>
+                <input type="text" name="username" id="formUsername" class="form-control" required placeholder="请输入用户名" style="width:100%;height:38px;padding:0 12px;border:1px solid #DCDFE6;border-radius:4px;">
+            </div>
+            <div class="filter-item" style="margin-bottom:12px;">
+                <label>密码：</label>
+                <input type="password" name="password" id="formPassword" class="form-control" placeholder="留空则不修改" style="width:100%;height:38px;padding:0 12px;border:1px solid #DCDFE6;border-radius:4px;">
+            </div>
+            <div class="filter-item" style="margin-bottom:12px;">
+                <label>角色：</label>
+                <select name="role" id="formRole" style="width:100%;height:38px;padding:0 12px;border:1px solid #DCDFE6;border-radius:4px;">
+                    {% for code, label in role_choices %}
+                    <option value="{{ code }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-item" style="margin-bottom:12px;">
+                <label>部门：</label>
+                <input type="text" name="department" id="formDept" class="form-control" placeholder="例：工程部" style="width:100%;height:38px;padding:0 12px;border:1px solid #DCDFE6;border-radius:4px;">
+            </div>
+            <div class="filter-item" style="margin-bottom:12px;">
+                <label>工厂：</label>
+                <select name="factory" id="formFactory" style="width:100%;height:38px;padding:0 12px;border:1px solid #DCDFE6;border-radius:4px;">
+                    <option value="">不限</option>
+                    {% for f in factories %}
+                    <option value="{{ f.id }}">{{ f.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="margin-bottom:12px;display:flex;gap:20px;">
+                <label style="display:flex;align-items:center;gap:6px;font-size:14px;">
+                    <input type="checkbox" name="is_staff" id="formStaff"> 管理后台权限
+                </label>
+                <label style="display:flex;align-items:center;gap:6px;font-size:14px;">
+                    <input type="checkbox" name="is_active" id="formActive" checked> 启用
+                </label>
+            </div>
+            <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:20px;">
+                <button type="button" class="btn btn-default" onclick="closeModal()">取消</button>
+                <button type="submit" class="btn btn-primary">保存</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 删除确认 -->
+<div id="deleteModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);z-index:1001;align-items:center;justify-content:center;">
+    <div style="background:#fff;border-radius:8px;width:380px;padding:24px;box-shadow:0 8px 32px rgba(0,0,0,0.2);text-align:center;">
+        <i class="fas fa-exclamation-triangle" style="color:#F56C6C;font-size:36px;margin-bottom:12px;"></i>
+        <p style="font-size:15px;margin-bottom:8px;">确定删除用户 <strong id="delUserName"></strong>？</p>
+        <p style="font-size:12px;color:#909399;margin-bottom:20px;">此操作不可恢复</p>
+        <form method="post" style="display:flex;gap:12px;justify-content:center;">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="delete">
+            <input type="hidden" name="user_id" id="delUserId" value="">
+            <button type="button" class="btn btn-default" onclick="closeDeleteModal()">取消</button>
+            <button type="submit" class="btn" style="background:#F56C6C;color:#fff;border:none;">确认删除</button>
+        </form>
+    </div>
+</div>
+
+<!-- 停用/启用确认 -->
+<form id="toggleForm" method="post" style="display:none;">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="toggle_active">
+    <input type="hidden" name="user_id" id="toggleUserId" value="">
+</form>
+
+<script>
+function showCreateForm() {
+    document.getElementById('modalTitle').textContent = '新建用户';
+    document.getElementById('formAction').value = 'create';
+    document.getElementById('formUserId').value = '';
+    document.getElementById('formUsername').value = '';
+    document.getElementById('formPassword').value = '';
+    document.getElementById('formRole').value = 'viewer';
+    document.getElementById('formDept').value = '';
+    document.getElementById('formFactory').value = '';
+    document.getElementById('formStaff').checked = false;
+    document.getElementById('formActive').checked = true;
+    document.getElementById('formPassword').required = true;
+    document.getElementById('userModal').style.display = 'flex';
+}
+function editUser(id, name, role, dept, factory, staff, active) {
+    document.getElementById('modalTitle').textContent = '编辑用户：' + name;
+    document.getElementById('formAction').value = 'edit';
+    document.getElementById('formUserId').value = id;
+    document.getElementById('formUsername').value = name;
+    document.getElementById('formPassword').value = '';
+    document.getElementById('formPassword').required = false;
+    document.getElementById('formRole').value = role;
+    document.getElementById('formDept').value = dept || '';
+    document.getElementById('formFactory').value = factory || '';
+    document.getElementById('formStaff').checked = staff;
+    document.getElementById('formActive').checked = active;
+    document.getElementById('userModal').style.display = 'flex';
+}
+function closeModal() { document.getElementById('userModal').style.display = 'none'; }
+function deleteUser(id, name) {
+    document.getElementById('delUserId').value = id;
+    document.getElementById('delUserName').textContent = name;
+    document.getElementById('deleteModal').style.display = 'flex';
+}
+function closeDeleteModal() { document.getElementById('deleteModal').style.display = 'none'; }
+function toggleUser(id) {
+    if (!confirm('确定要切换此用户的启用状态？')) return;
+    document.getElementById('toggleUserId').value = id;
+    document.getElementById('toggleForm').submit();
+}
+</script>
+{% endblock %}

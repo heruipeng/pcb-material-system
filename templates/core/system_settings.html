@@ -1,0 +1,176 @@
+{% extends 'base.html' %}
+{% block title %}系统设置{% endblock %}
+
+{% block content %}
+<!-- 系统信息卡片 -->
+<div class="filter-card" style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:16px;">
+    <div style="flex:1;min-width:160px;text-align:center;padding:16px;border-right:1px solid #EBEEF5;">
+        <div style="font-size:24px;font-weight:700;color:#409EFF;">{{ system_info.django }}</div>
+        <div style="color:#909399;font-size:12px;">Django 版本</div>
+    </div>
+    <div style="flex:1;min-width:160px;text-align:center;padding:16px;border-right:1px solid #EBEEF5;">
+        <div style="font-size:24px;font-weight:700;color:#67C23A;">{{ system_info.python }}</div>
+        <div style="color:#909399;font-size:12px;">Python 版本</div>
+    </div>
+    <div style="flex:1;min-width:160px;text-align:center;padding:16px;border-right:1px solid #EBEEF5;">
+        <div style="font-size:24px;font-weight:700;color:#E6A23C;">{{ log_stats.total }}</div>
+        <div style="color:#909399;font-size:12px;">操作日志总数</div>
+    </div>
+    <div style="flex:1;min-width:160px;text-align:center;padding:16px;">
+        <div style="font-size:24px;font-weight:700;color:#909399;">{{ log_stats.today }}</div>
+        <div style="color:#909399;font-size:12px;">今日操作</div>
+    </div>
+</div>
+
+<!-- 系统配置 -->
+<div class="filter-card" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+    <h3 style="margin:0;font-size:16px;color:#303133;">
+        <i class="fas fa-sliders-h" style="color:#409EFF;"></i> 系统配置
+    </h3>
+    <button class="btn btn-primary btn-sm" onclick="showConfigForm()">
+        <i class="fas fa-plus"></i> 新增配置
+    </button>
+</div>
+
+{% if messages %}
+<div style="margin-bottom:12px;">
+    {% for msg in messages %}
+    <div style="padding:10px 16px;border-radius:4px;font-size:13px;
+        {% if msg.tags == 'error' %}background:#fef0f0;color:#F56C6C;border:1px solid #fde2e2;
+        {% else %}background:#f0f9eb;color:#67C23A;border:1px solid #e1f3d8;{% endif %}">
+        {{ msg }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="table-card">
+    <table class="table">
+        <thead>
+            <tr>
+                <th style="width:200px;">配置键</th>
+                <th>配置值</th>
+                <th style="width:200px;">说明</th>
+                <th style="width:100px;">操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for c in configs %}
+            <tr>
+                <td><code style="color:#409EFF;background:#ecf5ff;padding:2px 8px;border-radius:3px;font-size:12px;">{{ c.key }}</code></td>
+                <td>
+                    <span style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;" title="{{ c.value }}">
+                        {{ c.value }}
+                    </span>
+                </td>
+                <td style="color:#909399;font-size:13px;">{{ c.description|default:"-" }}</td>
+                <td>
+                    <a href="javascript:void(0)" class="link-btn" onclick="editConfig('{{ c.key }}', '{{ c.value|escapejs }}', '{{ c.description|escapejs|default:'' }}')">编辑</a>
+                    <a href="javascript:void(0)" class="link-btn" style="color:#F56C6C;" onclick="deleteConfig('{{ c.key }}')">删除</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4"><div class="empty-state"><p>暂无系统配置</p></div></td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- 操作日志 -->
+<div class="filter-card" style="display:flex;align-items:center;justify-content:space-between;margin:16px 0;">
+    <h3 style="margin:0;font-size:16px;color:#303133;">
+        <i class="fas fa-history" style="color:#E6A23C;"></i> 操作日志
+    </h3>
+</div>
+
+<div class="table-card">
+    <table class="table">
+        <thead>
+            <tr>
+                <th style="width:160px;">时间</th>
+                <th style="width:80px;">操作人</th>
+                <th style="width:80px;">操作</th>
+                <th style="width:100px;">模块</th>
+                <th style="width:80px;">对象ID</th>
+                <th>描述</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in logs %}
+            <tr>
+                <td>{{ log.created_at|date:"Y-m-d H:i:s" }}</td>
+                <td><strong>{{ log.user.username|default:"-" }}</strong></td>
+                <td><span class="tag">{{ log.action }}</span></td>
+                <td>{{ log.module }}</td>
+                <td>{{ log.object_id|default:"-" }}</td>
+                <td style="color:#909399;">{{ log.remark|default:"-" }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6"><div class="empty-state"><p>暂无操作日志</p></div></td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- 新增/编辑配置弹窗 -->
+<div id="configModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);z-index:1000;align-items:center;justify-content:center;">
+    <div style="background:#fff;border-radius:8px;width:500px;padding:0;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+        <div style="padding:16px 20px;border-bottom:1px solid #EBEEF5;display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-weight:600;font-size:16px;" id="cfgModalTitle">新增配置</span>
+            <a href="javascript:void(0)" style="color:#909399;font-size:18px;" onclick="closeCfgModal()">&times;</a>
+        </div>
+        <form method="post" style="padding:20px;">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="save_config">
+            <div class="filter-item" style="margin-bottom:12px;">
+                <label>配置键：</label>
+                <input type="text" name="key" id="cfgKey" class="form-control" required placeholder="例：site_name" style="width:100%;height:38px;padding:0 12px;border:1px solid #DCDFE6;border-radius:4px;">
+            </div>
+            <div class="filter-item" style="margin-bottom:12px;">
+                <label>配置值：</label>
+                <input type="text" name="value" id="cfgValue" class="form-control" required placeholder="例：飞针测试资料管理系统" style="width:100%;height:38px;padding:0 12px;border:1px solid #DCDFE6;border-radius:4px;">
+            </div>
+            <div class="filter-item" style="margin-bottom:12px;">
+                <label>说明：</label>
+                <input type="text" name="description" id="cfgDesc" class="form-control" placeholder="配置说明" style="width:100%;height:38px;padding:0 12px;border:1px solid #DCDFE6;border-radius:4px;">
+            </div>
+            <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:20px;">
+                <button type="button" class="btn btn-default" onclick="closeCfgModal()">取消</button>
+                <button type="submit" class="btn btn-primary">保存</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 删除配置 -->
+<form id="deleteCfgForm" method="post" style="display:none;">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="delete_config">
+    <input type="hidden" name="key" id="deleteCfgKey" value="">
+</form>
+
+<script>
+function showConfigForm() {
+    document.getElementById('cfgModalTitle').textContent = '新增配置';
+    document.getElementById('cfgKey').value = '';
+    document.getElementById('cfgKey').readOnly = false;
+    document.getElementById('cfgValue').value = '';
+    document.getElementById('cfgDesc').value = '';
+    document.getElementById('configModal').style.display = 'flex';
+}
+function editConfig(key, value, desc) {
+    document.getElementById('cfgModalTitle').textContent = '编辑配置';
+    document.getElementById('cfgKey').value = key;
+    document.getElementById('cfgKey').readOnly = true;
+    document.getElementById('cfgValue').value = value;
+    document.getElementById('cfgDesc').value = desc || '';
+    document.getElementById('configModal').style.display = 'flex';
+}
+function closeCfgModal() { document.getElementById('configModal').style.display = 'none'; }
+function deleteConfig(key) {
+    if (!confirm('确定删除配置 ' + key + ' ？')) return;
+    document.getElementById('deleteCfgKey').value = key;
+    document.getElementById('deleteCfgForm').submit();
+}
+</script>
+{% endblock %}
