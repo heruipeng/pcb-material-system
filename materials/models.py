@@ -31,11 +31,22 @@ class Material(models.Model):
         ('archived', '已归档'),
     ]
     
+    PROCESS_TYPE_CHOICES = [
+        ('fly_probe', '飞针测试'),
+        ('impedance', '阻抗测试'),
+        ('aoi', 'AOI检测'),
+        ('xray', 'X-Ray检测'),
+        ('ict', 'ICT测试'),
+        ('functional', '功能测试'),
+        ('other', '其他'),
+    ]
+    
     # 基本信息
     serial_no = models.CharField('流水号', max_length=20, unique=True)
     factory = models.ForeignKey('core.Factory', on_delete=models.CASCADE, verbose_name='工厂')
     material_no = models.CharField('料号', max_length=50)
     version_code = models.CharField('版本编码', max_length=10)
+    process_type = models.CharField('工具类型', max_length=20, choices=PROCESS_TYPE_CHOICES, default='other')
     category = models.ForeignKey(MaterialCategory, on_delete=models.SET_NULL, null=True, verbose_name='分类')
     
     # 状态信息

@@ -106,10 +106,25 @@ mcat={}
 for cat in [('PCB_DSN','PCB设计图'),('GERBER','Gerber文件'),('BOM','物料清单'),('SPEC','技术规格书'),('TEST_RPT','测试报告'),('QC_REC','质检记录')]:
     obj,_=MaterialCategory.objects.get_or_create(code=cat[0],defaults={'name':cat[1],'sort_order':1}); mcat[cat[0]]=obj
 admin=User.objects.get(username='admin'); zhangsan=User.objects.get(username='zhangsan')
-statuses=['unmade','making','making','completed','completed','audited','audited','audited','completed','completed','audited','archived','unmade','completed','audited','audited','completed','audited','completed','unmade']
-for i,s in enumerate(statuses,start=1):
-    fid='SZ01' if i<=10 else ('SZ02' if i<=15 else 'DG01')
-    Material.objects.get_or_create(serial_no=f'PCB-{i:04d}',defaults={'factory':fmap[fid],'material_no':f'PN-{6000+i}','version_code':f'V{1+(i%3)}.{i%5}','category':mcat[list(mcat.keys())[i%6]],'status':s,'creator':admin,'maker':zhangsan})
+# Generate 1000 materials
+import random
+ptypes = ['fly_probe','impedance','aoi','xray','ict','functional','other']
+statuses = ['unmade','making','completed','audited']
+f1 = fmap['SZ01']; f2 = fmap['SZ02']; f3 = fmap['DG01']
+for i in range(1, 1001):
+    fid = f1 if i<=400 else (f2 if i<=700 else f3)
+    sid = f'SZ0{1 if i<=400 else (2 if i<=700 else 3)}'
+    pt = ptypes[i % len(ptypes)]
+    Material.objects.get_or_create(serial_no=f'PCB-{i:05d}',defaults={
+        'factory': fid,
+        'material_no': f'PN-{6000+i}',
+        'version_code': f'V{1+(i%5)}.{i%7}',
+        'category': mcat[list(mcat.keys())[i%6]],
+        'process_type': pt,
+        'status': statuses[i % len(statuses)],
+        'creator': admin,
+        'maker': zhangsan,
+    })
 tcat={}
 for tc in [('FLY_PROBE','Flying Probe'),('IMPEDANCE','Impedance'),('AOI','AOI'),('XRAY','X-Ray')]:
     obj,_=ToolCategory.objects.get_or_create(code=tc[0],defaults={'name':tc[1],'sort_order':1}); tcat[tc[0]]=obj

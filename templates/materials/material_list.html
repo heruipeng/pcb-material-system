@@ -31,6 +31,19 @@
         </div>
         <div class="filter-item"><label>开始日期：</label><input type="date" id="searchDateFrom" value="{{ request.GET.date_from }}"></div>
         <div class="filter-item"><label>结束日期：</label><input type="date" id="searchDateTo" value="{{ request.GET.date_to }}"></div>
+        <div class="filter-item">
+            <label>工具类型：</label>
+            <select id="searchProcessType">
+                <option value="">全部</option>
+                <option value="fly_probe">飞针测试</option>
+                <option value="impedance">阻抗测试</option>
+                <option value="aoi">AOI检测</option>
+                <option value="xray">X-Ray检测</option>
+                <option value="ict">ICT测试</option>
+                <option value="functional">功能测试</option>
+                <option value="other">其他</option>
+            </select>
+        </div>
         <div style="display:flex;align-items:flex-end;gap:8px;">
             <button class="btn btn-primary" onclick="doSearch()">查询</button>
             <button class="btn btn-default" onclick="doReset()">重置</button>
@@ -55,6 +68,7 @@
                 <th style="width:100px;">厂区</th>
                 <th style="width:180px;">料号</th>
                 <th style="width:80px;">版本</th>
+                <th style="width:100px;">工具类型</th>
                 <th style="width:200px;">备注</th>
                 <th style="width:160px;">创建时间</th>
                 <th style="width:90px;">制作人</th>
@@ -71,6 +85,7 @@
                 <td>{{ item.factory.code|default:item.factory_id }}</td>
                 <td>{{ item.material_no }}</td>
                 <td>{{ item.version_code }}</td>
+                <td><span class="tag" style="color:#909399;background:#f4f4f5;border:1px solid #e9e9eb;">{{ item.process_type_display }}</span></td>
                 <td>{{ item.remark|default:"-" }}</td>
                 <td>{{ item.created_at|date:"Y-m-d H:i" }}</td>
                 <td>{{ item.maker_name|default:"-" }}</td>
@@ -82,7 +97,7 @@
             </tr>
             {% endfor %}
             {% else %}
-            <tr><td colspan="10"><div class="empty-state"><p>暂无资料</p></div></td></tr>
+            <tr><td colspan="11"><div class="empty-state"><p>暂无资料</p></div></td></tr>
             {% endif %}
         </tbody>
     </table>
@@ -108,11 +123,13 @@ function doSearch() {
     var kw = document.getElementById('searchKeyword').value.trim();
     var fa = document.getElementById('searchFactory').value;
     var st = document.getElementById('searchStatus').value;
+    var pt = document.getElementById('searchProcessType').value;
     var df = document.getElementById('searchDateFrom').value;
     var dt = document.getElementById('searchDateTo').value;
     if(kw) p.set('keyword', kw);
     if(fa) p.set('factory', fa);
     if(st) p.set('status', st);
+    if(pt) p.set('process_type', pt);
     if(df) p.set('date_from', df);
     if(dt) p.set('date_to', dt);
     window.location.href = '?' + p.toString();

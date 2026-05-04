@@ -54,6 +54,9 @@ def material_list_page(request):
         queryset = queryset.filter(factory_id=factory_id)
     if status_filter:
         queryset = queryset.filter(status=status_filter)
+    process_type_filter = request.GET.get('process_type', '')
+    if process_type_filter:
+        queryset = queryset.filter(process_type=process_type_filter)
     if date_from:
         queryset = queryset.filter(created_at__date__gte=date_from)
     if date_to:
@@ -76,8 +79,9 @@ def material_list_page(request):
     
     # 添加 maker_name 到每个对象
     for item in page_obj:
-        item.maker_name = item.maker.username if item.maker else 'None'
+        item.maker_name = item.maker.username if item.maker else '-'
         item.status_display = item.get_status_display()
+        item.process_type_display = item.get_process_type_display()
     
     context = {
         'page_obj': page_obj,
@@ -104,6 +108,7 @@ def material_detail_page(request, id):
         'histories': histories,
         'attachments': attachments,
         'status_display': dict(Material.STATUS_CHOICES).get(material.status, material.status),
+        'process_type_display': material.get_process_type_display(),
     }
     return render(request, 'materials/material_detail.html', context)
 
