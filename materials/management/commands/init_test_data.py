@@ -96,7 +96,7 @@ SAMPLE_DATA = [
 
 
 class Command(BaseCommand):
-    help = '初始化飞针测试资料管理系统测试数据'
+    help = '初始化工程资料管理系统测试数据'
 
     def handle(self, *args, **options):
         from core.models import Factory
