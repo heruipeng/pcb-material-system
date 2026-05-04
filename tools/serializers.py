@@ -36,7 +36,8 @@ class ToolExecutionSerializer(serializers.ModelSerializer):
             'id', 'tool', 'tool_name', 'material', 'material_serial_no',
             'params', 'status', 'status_display', 'input_files', 'output_files',
             'output_data', 'executor', 'executor_name', 'started_at', 
-            'completed_at', 'duration', 'log_output', 'error_message', 'created_at'
+            'completed_at', 'duration', 'log_output', 'error_message',
+            'failure_reason', 'created_at'
         ]
 
 

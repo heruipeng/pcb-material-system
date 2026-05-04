@@ -56,8 +56,8 @@ fetch('/api/core/dashboard-stats/')
     .then(r => r.json())
     .then(d => {
         document.getElementById('totalCount').textContent = d.material_stats?.total || 0;
-        document.getElementById('completedCount').textContent = d.material_stats?.month || 0;
-        document.getElementById('unmadeCount').textContent = d.material_stats?.pending || 0;
+        document.getElementById('completedCount').textContent = d.material_stats?.completed || 0;
+        document.getElementById('unmadeCount').textContent = d.material_stats?.unmade || 0;
         document.getElementById('todayCount').textContent = d.material_stats?.today || 0;
         document.getElementById('toolCount').textContent = d.tool_stats?.total || 0;
     });

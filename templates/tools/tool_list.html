@@ -54,10 +54,12 @@
                 <th style="width:90px;">执行人</th>
                 <th style="width:150px;">开始时间</th>
                 <th style="width:80px;">耗时</th>
+                <th style="width:150px;">输出文件</th>
+                <th style="width:120px;">失败原因</th>
             </tr>
         </thead>
         <tbody id="executionTable">
-            <tr><td colspan="7"><div class="empty-state"><p>加载中...</p></div></td></tr>
+            <tr><td colspan="9"><div class="empty-state"><p>加载中...</p></div></td></tr>
         </tbody>
     </table>
 </div>
@@ -76,9 +78,9 @@ function loadExecutions() {
             var tb = document.getElementById('executionTable');
             if (d.results && d.results.length) {
                 tb.innerHTML = d.results.map(function(e) {
-                    return '<tr><td>'+e.id+'</td><td>'+ (e.tool_name || '-') +'</td><td>'+ (e.material_serial_no || '-') +'</td><td><span class="tag" style="color:'+(statusColor[e.status]||'#909399')+'">'+ (statusName[e.status] || e.status) +'</span></td><td>'+ (e.executor_name || '-') +'</td><td>'+ (e.started_at ? new Date(e.started_at).toLocaleString('zh-CN') : '-') +'</td><td>'+ (e.duration ? e.duration+'秒' : '-') +'</td></tr>';
+                    return '<tr><td>'+e.id+'</td><td>'+ (e.tool_name || '-') +'</td><td>'+ (e.material_serial_no || '-') +'</td><td><span class="tag" style="color:'+(statusColor[e.status]||'#909399')+'">'+ (statusName[e.status] || e.status) +'</span></td><td>'+ (e.executor_name || '-') +'</td><td>'+ (e.started_at ? new Date(e.started_at).toLocaleString('zh-CN') : '-') +'</td><td>'+ (e.duration ? e.duration+'秒' : '-') +'</td><td style="font-size:11px;">'+ ((e.output_files && e.output_files.length) ? e.output_files.join('<br>') : '-') +'</td><td style="color:#F56C6C;font-size:12px;">'+ (e.failure_reason || (e.error_message ? e.error_message.substring(0,30) : '-')) +'</td></tr>';
                 }).join('');
-            } else { tb.innerHTML = '<tr><td colspan="7"><div class="empty-state"><p>暂无执行记录</p></div></td></tr>'; }
+            } else { tb.innerHTML = '<tr><td colspan="9"><div class="empty-state"><p>暂无执行记录</p></div></td></tr>'; }
         });
 }
 function doSearch() { loadExecutions(); }

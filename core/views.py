@@ -143,7 +143,10 @@ def dashboard_stats(request):
         'today': Material.objects.filter(created_at__date=today).count(),
         'week': Material.objects.filter(created_at__date__gte=week_start).count(),
         'month': Material.objects.filter(created_at__date__gte=month_start).count(),
-        'pending': Material.objects.filter(status='pending').count(),
+        'unmade': Material.objects.filter(status='unmade').count(),
+        'making': Material.objects.filter(status='making').count(),
+        'completed': Material.objects.filter(status='completed').count(),
+        'audited': Material.objects.filter(status='audited').count(),
     }
     
     # 工具执行统计

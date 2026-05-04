@@ -93,6 +93,7 @@ class ToolExecution(models.Model):
     # 日志
     log_output = models.TextField('执行日志', blank=True)
     error_message = models.TextField('错误信息', blank=True)
+    failure_reason = models.CharField('失败原因', max_length=500, blank=True)
     
     created_at = models.DateTimeField('创建时间', auto_now_add=True)
     

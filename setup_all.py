@@ -90,7 +90,7 @@ from django.utils import timezone
 from accounts.models import User, Permission, RolePermission
 from core.models import Factory, SystemConfig
 from materials.models import MaterialCategory, Material
-from reports.models import ReportCategory, Report
+from reports.models import ReportCategory, Report, ReportInstance
 from tools.models import ToolCategory, Tool, ToolExecution
 
 print('='*60)
@@ -151,6 +151,12 @@ for mt in materials_list[:150]:
     tool = random.choice(tools_list)
     st = random.choice(['pending','running','completed','completed','completed','failed'])
     dur = random.randint(10, 3600) if st in ('completed','failed') else None
+    outfiles = []
+    if st == 'completed':
+        outfiles = [f'/output/{tool.code}/{mt.serial_no}_report.xlsx', f'/output/{tool.code}/{mt.serial_no}_log.txt']
+    fail_reason = ''
+    if st == 'failed':
+        fail_reason = random.choice(['连接超时','参数配置错误','文件格式不支持','内存不足','权限不足','测试点异常'])
     ToolExecution.objects.get_or_create(
         tool=tool, material=mt, status=st,
         defaults={
@@ -159,12 +165,31 @@ for mt in materials_list[:150]:
             'completed_at': timezone.now() - datetime.timedelta(minutes=random.randint(1, 10000)) if st in ('completed','failed') else None,
             'duration': dur,
             'params': {'mode': random.choice(['auto','manual']), 'layer': random.randint(1,16)},
+            'output_files': outfiles,
+            'failure_reason': fail_reason,
         }
     )
 
 for rd in [('RPT_Q001','每日质量巡检','summary','QUALITY'),('RPT_Q002','来料检验明细','detail','QUALITY'),('RPT_P001','每日产量汇总','summary','PRODUCTION'),('RPT_P002','工序效率分析','analysis','PRODUCTION'),('RPT_Y001','综合良率统计','statistical','YIELD'),('RPT_C001','物料成本核算','analysis','COST')]:
     Report.objects.get_or_create(code=rd[0],defaults={'name':rd[1],'category':rcat[rd[3]],'report_type':rd[2],'description':rd[1]})
-print('[OK] Materials x1000 + Tools x6 + Executions x150 + Reports x6')
+# Generate report instances
+rpts = list(Report.objects.all())
+import datetime as dt
+for i, rpt in enumerate(rpts):
+    for j in range(3):
+        st = random.choice(['completed','completed','completed','failed','pending'])
+        now = timezone.now()
+        ReportInstance.objects.get_or_create(
+            report=rpt, name=f'{rpt.name}_{now.strftime("%Y%m%d")}_{j+1}',
+            defaults={
+                'status': st,
+                'row_count': random.randint(50, 500) if st == 'completed' else 0,
+                'generated_by': random.choice(executors),
+                'generated_at': now - dt.timedelta(days=random.randint(0,30)),
+                'completed_at': now - dt.timedelta(days=random.randint(0,30)) if st == 'completed' else None,
+            }
+        )
+print('[OK] Materials x1000 + Tools x6 + Executions x150 + Reports x6 + Instances x18')
 perms={'material.view':'View','material.create':'Create','material.edit':'Edit','material.delete':'Delete','material.approve':'Approve','material.export':'Export','report.view':'View Reports','report.create':'Create Reports','report.export':'Export Reports','tool.view':'View Tools','tool.execute':'Execute','tool.config':'Configure','user.manage':'User Mgmt','system.config':'Config'}
 pobj={}
 for c,n in perms.items(): obj,_=Permission.objects.get_or_create(code=c,defaults={'name':n}); pobj[c]=obj
