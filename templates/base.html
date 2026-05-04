@@ -355,10 +355,10 @@
                 <i class="fas fa-chart-bar"></i> 报表管理
             </a>
             {% if user.role == 'admin' %}
-            <a href="/users/" class="menu-item {% if 'user' in request.path %}active{% endif %}">
+            <a href="/admin/accounts/user/" class="menu-item {% if 'user' in request.path %}active{% endif %}">
                 <i class="fas fa-users"></i> 用户管理
             </a>
-            <a href="/system/" class="menu-item {% if 'system' in request.path %}active{% endif %}">
+            <a href="/admin/" class="menu-item {% if 'system' in request.path %}active{% endif %}">
                 <i class="fas fa-cog"></i> 系统设置
             </a>
             {% endif %}
