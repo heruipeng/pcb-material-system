@@ -1,230 +1,88 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>PCB Engineering System</title>
-<style>
-:root{--bg:#f0f2f5;--s:#fff;--b:#e4e7eb;--t:#1d2129;--m:#86909c;--a:#165dff;--g:#00b42a;--o:#ff7d00;--r:#f53f3f}
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;color:var(--t);font-size:14px}
-/* Top bar */
-.tb{height:52px;background:var(--s);border-bottom:1px solid var(--b);display:flex;align-items:center;padding:0 24px;position:sticky;top:0;z-index:100;box-shadow:0 1px 4px rgba(0,0,0,.04)}
-.tb .l{font-size:16px;font-weight:600;text-decoration:none;color:var(--t)}
-.tb .l::before{content:"\229E ";color:var(--a)}
-.tb .u{margin-left:auto;display:flex;align-items:center;gap:12px}
-.tb .u span{color:var(--m);font-size:13px}
-.tb .u a{color:var(--a);text-decoration:none;font-size:13px;padding:4px 12px;border:1px solid var(--a);border-radius:4px}
-.tb .u a:hover{background:#e8f0fe}
-/* Tabs */
-.ts{background:var(--s);border-bottom:1px solid var(--b);padding:0 24px;display:flex}
-.t{padding:12px 24px;font-size:14px;font-weight:500;color:var(--m);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;transition:.15s}
-.t:hover{color:var(--a)}.t.ac{color:var(--a);border-bottom-color:var(--a)}
-/* Content */
-.ct{max-width:1400px;margin:0 auto;padding:24px}
-.pn{display:none}.pn.ac{display:block}
-/* Stats */
-.st{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
-.sc{background:var(--s);border:1px solid var(--b);border-radius:8px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
-.sc .v{font-size:32px;font-weight:700;color:var(--a)}
-.sc .la{font-size:13px;color:var(--m);margin-top:4px}
-/* Filter bar */
-.fb{background:var(--s);border:1px solid var(--b);border-radius:8px;padding:16px 20px;margin-bottom:16px;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;box-shadow:0 1px 3px rgba(0,0,0,.04)}
-.fg{display:flex;flex-direction:column;gap:4px}
-.fg label{font-size:12px;color:var(--m);font-weight:500}
-.fg input,.fg select{padding:7px 12px;border:1px solid var(--b);border-radius:6px;font-size:13px;background:#fafbfc;min-width:140px;outline:none;color:var(--t)}
-.fg input:focus,.fg select:focus{border-color:var(--a);box-shadow:0 0 0 2px rgba(22,93,255,.08);background:#fff}
-.bt{display:inline-flex;align-items:center;gap:6px;padding:7px 18px;border:none;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;text-decoration:none}
-.bt-p{background:var(--a);color:#fff}.bt-p:hover{background:#0e48d6}
-.bt-r{background:#fff;color:var(--t);border:1px solid var(--b)}.bt-r:hover{border-color:var(--a);color:var(--a)}
-/* Table */
-.tw{background:var(--s);border:1px solid var(--b);border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04)}
-table{width:100%;border-collapse:collapse;font-size:13px}
-th{background:#f7f8fa;color:var(--m);font-weight:600;font-size:12px;padding:10px 14px;text-align:left;border-bottom:1px solid var(--b);white-space:nowrap}
-td{padding:10px 14px;border-bottom:1px solid var(--b)}
-tr:hover td{background:#f7f8fa}
-/* Badges */
-.bg{display:inline-block;padding:2px 10px;border-radius:10px;font-size:12px;font-weight:500}
-.bg-s{color:var(--g);background:#e8ffea}
-.bg-p{color:var(--o);background:#fff7e8}
-.bg-d{color:var(--m);background:#f2f3f5}
-.bg-e{color:var(--r);background:#ffece8}
-.lk{color:var(--a);text-decoration:none;cursor:pointer}.lk:hover{text-decoration:underline}
-.em{text-align:center;padding:60px 20px;color:var(--m)}
-.ft{text-align:center;padding:20px;color:var(--m);font-size:12px}
-/* Tool list */
-.tool-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
-.tool-card{background:var(--s);border:1px solid var(--b);border-radius:8px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.04);transition:.15s}
-.tool-card:hover{box-shadow:0 2px 8px rgba(0,0,0,.08)}
-.tool-card h3{font-size:15px;font-weight:600;margin-bottom:8px;color:var(--t)}
-.tool-card .meta{font-size:12px;color:var(--m);margin-bottom:4px}
-.tool-card .desc{font-size:13px;color:var(--m);margin-top:8px}
-.top-actions{display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap}
-</style>
-</head>
-<body>
-<div class="tb">
-    <a href="/" class="l">PCB Engineering System</a>
-    <div class="u">
-        <span>{{ request.user.username }} <strong style="color:var(--a)">[{{ request.user.get_role_display }}]</strong></span>
-        <a href="{% url 'logout' %}">Sign Out</a>
+{% extends 'base.html' %}
+{% block title %}首页 - 飞针测试资料管理系统 V2.0{% endblock %}
+
+{% block content %}
+<!-- 统计卡片 -->
+<div class="filter-card" style="display:flex;gap:20px;flex-wrap:wrap;">
+    <div style="flex:1;min-width:180px;text-align:center;padding:20px;border-right:1px solid #EBEEF5;">
+        <div style="font-size:32px;font-weight:700;color:#409EFF;" id="totalCount">-</div>
+        <div style="color:#909399;font-size:13px;margin-top:4px;">资料总数</div>
+    </div>
+    <div style="flex:1;min-width:180px;text-align:center;padding:20px;border-right:1px solid #EBEEF5;">
+        <div style="font-size:32px;font-weight:700;color:#67C23A;" id="completedCount">-</div>
+        <div style="color:#909399;font-size:13px;margin-top:4px;">已完成</div>
+    </div>
+    <div style="flex:1;min-width:180px;text-align:center;padding:20px;border-right:1px solid #EBEEF5;">
+        <div style="font-size:32px;font-weight:700;color:#E6A23C;" id="unmadeCount">-</div>
+        <div style="color:#909399;font-size:13px;margin-top:4px;">未制作</div>
+    </div>
+    <div style="flex:1;min-width:180px;text-align:center;padding:20px;border-right:1px solid #EBEEF5;">
+        <div style="font-size:32px;font-weight:700;color:#909399;" id="todayCount">-</div>
+        <div style="color:#909399;font-size:13px;margin-top:4px;">今日新增</div>
+    </div>
+    <div style="flex:1;min-width:180px;text-align:center;padding:20px;">
+        <div style="font-size:32px;font-weight:700;color:#409EFF;" id="toolCount">-</div>
+        <div style="color:#909399;font-size:13px;margin-top:4px;">工具执行次数</div>
     </div>
 </div>
 
-<div class="ts">
-    <button class="t ac" onclick="sw('m')">Materials</button>
-    <button class="t" onclick="sw('r')">Reports</button>
-    <button class="t" onclick="sw('a')">Admin</button>
+<!-- 快捷入口 -->
+<div class="filter-card" style="display:flex;gap:12px;">
+    <a href="/materials/" class="btn btn-primary"><i class="fas fa-list"></i> 资料总纲</a>
+    <a href="/tools/" class="btn btn-success"><i class="fas fa-tools"></i> 工具输出</a>
+    <a href="/reports/" class="btn btn-default"><i class="fas fa-chart-bar"></i> 报表管理</a>
 </div>
 
-<div class="ct">
-
-<!-- ===== Materials Tab ===== -->
-<div id="pn-m" class="pn ac">
-    <div class="st">
-        <div class="sc"><div class="v">{{ total_materials }}</div><div class="la">Total Materials</div></div>
-        <div class="sc"><div class="v">{{ material_categories.count }}</div><div class="la">Categories</div></div>
-        <div class="sc"><div class="v">{{ total_tools }}</div><div class="la">Available Tools</div></div>
-        <div class="sc"><div class="v">{{ factories.count }}</div><div class="la">Factories</div></div>
+<!-- 最近资料 -->
+<div class="table-card">
+    <div style="padding:14px 16px;font-weight:600;font-size:15px;border-bottom:1px solid #EBEEF5;">
+        <i class="fas fa-clock" style="color:#409EFF;"></i> 最近资料
     </div>
-
-    <div class="fb">
-        <div class="fg"><label>Keyword</label><input id="kw-m" placeholder="Serial No / PN"></div>
-        <div class="fg"><label>Factory</label><select id="f-m"><option value="">All</option>{% for f in factories %}<option value="{{ f.code }}">{{ f.name }}</option>{% endfor %}</select></div>
-        <div class="fg"><label>Status</label><select id="s-m"><option value="">All</option>{% for c,l in material_status_choices %}<option value="{{ c }}">{{ l }}</option>{% endfor %}</select></div>
-        <button class="bt bt-p" onclick="ft('mt')">Search</button>
-        <button class="bt bt-r" onclick="rf('mt',['kw-m','f-m','s-m'])">Reset</button>
-    </div>
-
-    <div class="tw">
-        <table id="mt">
-            <thead><tr><th>Serial ID</th><th>Factory</th><th>Part No</th><th>Version</th><th>Category</th><th>Remark</th><th>Status</th><th>Maker</th><th>Created</th></tr></thead>
-            <tbody>
-                {% for m in materials %}
-                <tr data-factory="{{ m.factory.code }}" data-status="{{ m.status }}" data-kw="{{ m.serial_no }} {{ m.material_no }}">
-                    <td><span class="lk">{{ m.serial_no }}</span></td>
-                    <td>{{ m.factory.code }}</td>
-                    <td>{{ m.material_no }}</td>
-                    <td>{{ m.version_code }}</td>
-                    <td>{{ m.category.name|default:"-" }}</td>
-                    <td>{{ m.remark|default:"-" }}</td>
-                    <td>
-                        {% if m.status == 'approved' or m.status == 'published' %}
-                        <span class="bg bg-s">{{ m.get_status_display }}</span>
-                        {% elif m.status == 'pending' %}
-                        <span class="bg bg-p">{{ m.get_status_display }}</span>
-                        {% elif m.status == 'rejected' %}
-                        <span class="bg bg-e">{{ m.get_status_display }}</span>
-                        {% else %}
-                        <span class="bg bg-d">{{ m.get_status_display }}</span>
-                        {% endif %}
-                    </td>
-                    <td>{{ m.maker.username|default:"-" }}</td>
-                    <td>{{ m.created_at|date:"Y-m-d H:i" }}</td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="9" class="em">No material data</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-
-    <!-- Tools section -->
-    <h3 style="margin:24px 0 16px;font-size:16px;font-weight:600">Available Tools</h3>
-    <div class="tool-grid">
-        {% for t in tools %}
-        <div class="tool-card">
-            <h3>{{ t.name }}</h3>
-            <div class="meta">Code: {{ t.code }} | Type: {{ t.get_tool_type_display }}</div>
-            <div class="meta">Category: {{ t.category.name }} | v{{ t.version }}</div>
-            <div class="desc">{{ t.description|default:"No description" }}</div>
-        </div>
-        {% empty %}
-        <div class="em" style="grid-column:1/-1">No tools configured</div>
-        {% endfor %}
-    </div>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>序号</th><th>流水ID</th><th>厂区ID</th><th>料号</th>
+                <th>版本编码</th><th>REMARK</th><th>创建时间</th><th>制作人</th><th>状态</th>
+            </tr>
+        </thead>
+        <tbody id="recentTable">
+            <tr><td colspan="9"><div class="empty-state"><p>加载中...</p></div></td></tr>
+        </tbody>
+    </table>
 </div>
-
-<!-- ===== Reports Tab ===== -->
-<div id="pn-r" class="pn">
-    <div class="st">
-        <div class="sc"><div class="v">{{ total_reports }}</div><div class="la">Total Reports</div></div>
-        <div class="sc"><div class="v">{{ report_categories.count }}</div><div class="la">Report Categories</div></div>
-    </div>
-
-    <div class="fb">
-        <div class="fg"><label>Keyword</label><input id="kw-r" placeholder="Report Name / Code"></div>
-        <div class="fg"><label>Category</label><select id="c-r"><option value="">All</option>{% for c in report_categories %}<option value="{{ c.code }}">{{ c.name }}</option>{% endfor %}</select></div>
-        <button class="bt bt-p" onclick="ft('rt')">Search</button>
-        <button class="bt bt-r" onclick="rf('rt',['kw-r','c-r'])">Reset</button>
-    </div>
-
-    <div class="tw">
-        <table id="rt">
-            <thead><tr><th>Code</th><th>Name</th><th>Category</th><th>Type</th><th>Description</th><th>Created</th></tr></thead>
-            <tbody>
-                {% for r in reports %}
-                <tr data-category="{{ r.category.code }}" data-kw="{{ r.name }} {{ r.code }}">
-                    <td><span class="lk">{{ r.code }}</span></td>
-                    <td>{{ r.name }}</td>
-                    <td>{{ r.category.name|default:"-" }}</td>
-                    <td>{{ r.get_report_type_display }}</td>
-                    <td>{{ r.description|default:"-" }}</td>
-                    <td>{{ r.created_at|date:"Y-m-d H:i" }}</td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="6" class="em">No report data</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
-
-<!-- ===== Admin Tab ===== -->
-<div id="pn-a" class="pn">
-    <div class="tw" style="padding:60px;text-align:center">
-        <div style="font-size:48px;margin-bottom:16px;opacity:.3">&#x2699;</div>
-        <p style="font-size:16px;font-weight:500;margin-bottom:8px">Django Admin Console</p>
-        <p style="color:var(--m);margin-bottom:24px">User management · Permissions · System settings</p>
-        <a href="/admin/" class="bt bt-p" style="text-decoration:none;padding:10px 32px;font-size:14px">Open Admin &rarr;</a>
-    </div>
-</div>
-
-</div>
-
-<div class="ft">PCB Engineering System v2.0 &copy; 2026</div>
 
 <script>
-function sw(n){
-    var tabs={m:1,r:2,a:3};
-    document.querySelectorAll('.t').forEach(function(t,i){t.classList.toggle('ac',i+1===tabs[n])});
-    document.querySelectorAll('.pn').forEach(function(p){p.classList.remove('ac')});
-    document.getElementById('pn-'+n).classList.add('ac');
-}
-function ft(id){
-    var rows=document.querySelectorAll('#'+id+' tbody tr');
-    var p=id==='mt'?'m':'r';
-    var kw=(document.getElementById('kw-'+p)?.value||'').toLowerCase();
-    var fac=document.getElementById('f-'+p)?.value||'';
-    var sta=document.getElementById('s-'+p)?.value||'';
-    var cat=document.getElementById('c-'+p)?.value||'';
-    rows.forEach(function(row){
-        var ok=(!kw||(row.dataset.kw||'').toLowerCase().indexOf(kw)>-1)
-            &&(!fac||(row.dataset.factory||'')===fac)
-            &&(!sta||(row.dataset.status||'')===sta)
-            &&(!cat||(row.dataset.category||'')===cat);
-        row.style.display=ok?'':'none';
+fetch('/api/core/dashboard-stats/')
+    .then(r => r.json())
+    .then(d => {
+        document.getElementById('totalCount').textContent = d.material_stats?.total || 0;
+        document.getElementById('completedCount').textContent = d.material_stats?.month || 0;
+        document.getElementById('unmadeCount').textContent = d.material_stats?.pending || 0;
+        document.getElementById('todayCount').textContent = d.material_stats?.today || 0;
+        document.getElementById('toolCount').textContent = d.tool_stats?.total || 0;
     });
-}
-function rf(id,ids){
-    ids.forEach(function(i){var e=document.getElementById(i);if(e)e.value='';});
-    ft(id);
-}
-document.querySelectorAll('.fb input').forEach(function(inp){
-    inp.addEventListener('keydown',function(e){
-        if(e.key==='Enter')ft(inp.closest('.pn').querySelector('table').id);
+
+fetch('/api/materials/?page_size=6&ordering=-created_at')
+    .then(r => r.json())
+    .then(d => {
+        const tbody = document.getElementById('recentTable');
+        if (d.results?.length) {
+            tbody.innerHTML = d.results.map((m, i) => `
+                <tr>
+                    <td>${i + 1}</td>
+                    <td>${m.serial_no}</td>
+                    <td>${m.factory_name || m.factory || '-'}</td>
+                    <td>${m.material_no}</td>
+                    <td>${m.version_code}</td>
+                    <td>${m.remark || 'None'}</td>
+                    <td>${new Date(m.created_at).toLocaleString('zh-CN')}</td>
+                    <td>${m.maker_name || m.creator_name || 'None'}</td>
+                    <td><span class="tag tag-${m.status_display}">${m.status_display}</span></td>
+                </tr>
+            `).join('');
+        } else {
+            tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><i class="fas fa-inbox"></i><p>暂无数据</p></div></td></tr>';
+        }
     });
-});
 </script>
-</body>
-</html>
+{% endblock %}

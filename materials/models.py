@@ -23,11 +23,11 @@ class MaterialCategory(models.Model):
 class Material(models.Model):
     """工程资料主表"""
     STATUS_CHOICES = [
-        ('draft', '草稿'),
-        ('pending', '待审批'),
-        ('approved', '已审批'),
+        ('unmade', '未制作'),
+        ('making', '制作中'),
+        ('completed', '已完成'),
+        ('audited', '已审核'),
         ('rejected', '已驳回'),
-        ('published', '已发布'),
         ('archived', '已归档'),
     ]
     

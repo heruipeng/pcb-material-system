@@ -1,290 +1,222 @@
 {% extends 'base.html' %}
-
-{% block title %}资料总纲 - PCB工程资料管理系统{% endblock %}
-
-{% block breadcrumb %}
-<li class="breadcrumb-item active">资料总纲</li>
-{% endblock %}
+{% block title %}资料总纲 - 飞针测试资料管理系统 V2.0{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <!-- 搜索栏 -->
-    <div class="search-bar">
-        <form method="get" class="row g-3">
-            <div class="col-md-3">
-                <input type="text" name="keyword" class="form-control" placeholder="关键字：料号/流水号/备注" 
-                       value="{{ request.GET.keyword }}">
-            </div>
-            <div class="col-md-2">
-                <select name="factory" class="form-select">
-                    <option value="">全部工厂</option>
-                    {% for factory in factories %}
-                    <option value="{{ factory.id }}" {% if request.GET.factory == factory.id|stringformat:"s" %}selected{% endif %}>
-                        {{ factory.name }}
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-2">
-                <select name="status" class="form-select">
-                    <option value="">全部状态</option>
-                    <option value="draft" {% if request.GET.status == 'draft' %}selected{% endif %}>草稿</option>
-                    <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>待审批</option>
-                    <option value="approved" {% if request.GET.status == 'approved' %}selected{% endif %}>已审批</option>
-                    <option value="published" {% if request.GET.status == 'published' %}selected{% endif %}>已发布</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <input type="date" name="date_from" class="form-control" placeholder="开始日期" value="{{ request.GET.date_from }}">
-            </div>
-            <div class="col-md-2">
-                <input type="date" name="date_to" class="form-control" placeholder="结束日期" value="{{ request.GET.date_to }}">
-            </div>
-            <div class="col-md-1">
-                <button type="submit" class="btn btn-primary w-100">
-                    <i class="fas fa-search"></i> 查询
-                </button>
-            </div>
-        </form>
-    </div>
-    
-    <!-- 操作按钮 -->
-    <div class="mb-3">
-        {% if user.has_permission 'material.create' %}
-        <a href="/materials/create/" class="btn btn-success">
-            <i class="fas fa-plus"></i> 新建资料
-        </a>
-        {% endif %}
-        <button class="btn btn-outline-primary" onclick="exportData()">
-            <i class="fas fa-download"></i> 导出
-        </button>
-    </div>
-    
-    <!-- 数据表格 -->
-    <div class="table-container">
-        <table class="table table-striped table-hover data-table">
-            <thead>
-                <tr>
-                    <th>序号</th>
-                    <th>流水ID</th>
-                    <th>厂区ID</th>
-                    <th>料号</th>
-                    <th>版本编码</th>
-                    <th>REMARK</th>
-                    <th>创建时间</th>
-                    <th>文件路径</th>
-                    <th>制作人</th>
-                    <th>资料制作状态</th>
-                    <th>操作</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for material in materials %}
-                <tr>
-                    <td>{{ forloop.counter }}</td>
-                    <td>{{ material.serial_no }}</td>
-                    <td>{{ material.factory.code }}</td>
-                    <td>{{ material.material_no }}</td>
-                    <td>{{ material.version_code }}</td>
-                    <td>{{ material.remark|default:"None" }}</td>
-                    <td>{{ material.created_at|date:"Y-m-d H:i:s" }}</td>
-                    <td>
-                        {% if material.file_path %}
-                        <span class="text-truncate d-inline-block" style="max-width: 200px;" title="{{ material.file_path }}">
-                            {{ material.file_path }}
-                        </span>
-                        {% else %}
-                        <span class="text-muted">None</span>
-                        {% endif %}
-                    </td>
-                    <td>{{ material.maker.username|default:"None" }}</td>
-                    <td>
-                        <span class="status-badge status-{{ material.status }}">
-                            {{ material.get_status_display }}
-                        </span>
-                    </td>
-                    <td>
-                        <div class="btn-group btn-group-sm">
-                            <a href="/materials/{{ material.id }}/" class="btn btn-outline-primary" title="查看">
-                                <i class="fas fa-eye"></i>
-                            </a>
-                            {% if user.has_permission 'material.edit' %}
-                            <a href="/materials/{{ material.id }}/edit/" class="btn btn-outline-warning" title="编辑">
-                                <i class="fas fa-edit"></i>
-                            </a>
-                            {% endif %}
-                            {% if user.has_permission 'material.approve' and material.status == 'pending' %}
-                            <button class="btn btn-outline-success" onclick="approveMaterial({{ material.id }})" title="审批">
-                                <i class="fas fa-check"></i>
-                            </button>
-                            {% endif %}
-                            {% if user.has_permission 'material.create' and material.status == 'draft' %}
-                            <button class="btn btn-outline-info" onclick="generateMaterial({{ material.id }})" title="生成资料">
-                                <i class="fas fa-cog"></i> 生成资料
-                            </button>
-                            {% endif %}
-                        </div>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="11" class="text-center text-muted py-5">
-                        <i class="fas fa-inbox fa-3x mb-3"></i>
-                        <p>暂无数据</p>
-                    </td>
-                </tr>
+<!-- 搜索筛选区 -->
+<div class="filter-card">
+    <div class="filter-row">
+        <div class="filter-item">
+            <label>关键字：</label>
+            <input type="text" id="searchKeyword" placeholder="料号/流水号/备注" value="{{ request.GET.keyword }}">
+        </div>
+        <div class="filter-item">
+            <label>工厂：</label>
+            <select id="searchFactory">
+                <option value="">全部工厂</option>
+                {% for f in factories %}
+                <option value="{{ f.id }}" {% if request.GET.factory == f.id|stringformat:"s" %}selected{% endif %}>{{ f.name }}</option>
                 {% endfor %}
-            </tbody>
-        </table>
+            </select>
+        </div>
+        <div class="filter-item">
+            <label>状态：</label>
+            <select id="searchStatus">
+                <option value="">全部状态</option>
+                <option value="unmade" {% if request.GET.status == 'unmade' %}selected{% endif %}>未制作</option>
+                <option value="making" {% if request.GET.status == 'making' %}selected{% endif %}>制作中</option>
+                <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>已完成</option>
+                <option value="audited" {% if request.GET.status == 'audited' %}selected{% endif %}>已审核</option>
+            </select>
+        </div>
+        <div class="filter-item">
+            <label>开始日期：</label>
+            <input type="date" id="searchDateFrom" value="{{ request.GET.date_from }}">
+        </div>
+        <div class="filter-item">
+            <label>结束日期：</label>
+            <input type="date" id="searchDateTo" value="{{ request.GET.date_to }}">
+        </div>
+        <div style="display:flex;align-items:flex-end;gap:8px;">
+            <button class="btn btn-primary" onclick="doSearch()">
+                <i class="fas fa-search"></i> 查询
+            </button>
+            <button class="btn btn-default" onclick="doReset()">
+                <i class="fas fa-redo"></i> 重置
+            </button>
+        </div>
     </div>
+</div>
+
+<!-- 状态标签栏 -->
+<div class="status-tabs">
+    <a href="?status=" class="status-tab {% if not request.GET.status %}active{% endif %}">
+        全部 <span class="count">{{ status_counts.all }}</span>
+    </a>
+    <a href="?status=unmade" class="status-tab {% if request.GET.status == 'unmade' %}active{% endif %}">
+        未制作 <span class="count">{{ status_counts.unmade }}</span>
+    </a>
+    <a href="?status=making" class="status-tab {% if request.GET.status == 'making' %}active{% endif %}">
+        制作中 <span class="count">{{ status_counts.making }}</span>
+    </a>
+    <a href="?status=completed" class="status-tab {% if request.GET.status == 'completed' %}active{% endif %}">
+        已完成 <span class="count">{{ status_counts.completed }}</span>
+    </a>
+    <a href="?status=audited" class="status-tab {% if request.GET.status == 'audited' %}active{% endif %}">
+        已审核 <span class="count">{{ status_counts.audited }}</span>
+    </a>
+</div>
+
+<!-- 数据表格 -->
+<div class="table-card">
+    <table class="table">
+        <thead>
+            <tr>
+                <th style="width:60px;">序号</th>
+                <th style="width:130px;">流水ID</th>
+                <th style="width:100px;">厂区ID</th>
+                <th style="width:180px;">料号</th>
+                <th style="width:80px;">版本编码</th>
+                <th style="width:200px;">REMARK</th>
+                <th style="width:160px;">创建时间</th>
+                <th style="width:200px;">文件路径</th>
+                <th style="width:90px;">制作人</th>
+                <th style="width:110px;">资料制作状态</th>
+                <th style="width:100px;">操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if page_obj %}
+            {% for item in page_obj %}
+            <tr>
+                <td>{{ forloop.counter0|add:page_obj.start_index }}</td>
+                <td>{{ item.serial_no }}</td>
+                <td>{{ item.factory.code|default:item.factory_id }}</td>
+                <td>{{ item.material_no }}</td>
+                <td>{{ item.version_code }}</td>
+                <td>{{ item.remark|default:"None" }}</td>
+                <td>{{ item.created_at|date:"Y-m-d H:i:s" }}</td>
+                <td>
+                    <span style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;"
+                          title="{{ item.file_path }}">
+                        {{ item.file_path|default:"None" }}
+                    </span>
+                </td>
+                <td>{{ item.maker_name|default:"None" }}</td>
+                <td>
+                    <span class="tag tag-{{ item.status_display }}">{{ item.status_display }}</span>
+                </td>
+                <td>
+                    <a href="/materials/{{ item.id }}/" class="link-btn">详情</a>
+                    <a href="javascript:void(0)" class="link-btn" onclick="generateDoc({{ item.id }})">生成资料</a>
+                </td>
+            </tr>
+            {% endfor %}
+            {% else %}
+            <tr>
+                <td colspan="11">
+                    <div class="empty-state">
+                        <i class="fas fa-inbox"></i>
+                        <p>暂无数据</p>
+                    </div>
+                </td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
     
     <!-- 分页 -->
-    {% if materials.has_other_pages %}
-    <div class="pagination-container">
+    {% if page_obj %}
+    <div class="pagination-bar">
         <div>
-            显示第 {{ materials.start_index }} 到 {{ materials.end_index }} 条，共 {{ materials.paginator.count }} 条
+            总共 <strong>{{ page_obj.paginator.count }}</strong> 条
+            <span class="page-size">
+                每页
+                <select onchange="changePageSize(this.value)">
+                    <option value="10" {% if page_size == 10 %}selected{% endif %}>10</option>
+                    <option value="20" {% if page_size == 20 %}selected{% endif %}>20</option>
+                    <option value="50" {% if page_size == 50 %}selected{% endif %}>50</option>
+                    <option value="100" {% if page_size == 100 %}selected{% endif %}>100</option>
+                </select>
+                条
+            </span>
         </div>
-        <nav aria-label="Page navigation">
-            <ul class="pagination mb-0">
-                {% if materials.has_previous %}
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ materials.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">上一页</a>
-                </li>
+        <div class="pagination">
+            {% if page_obj.has_previous %}
+            <a class="page-btn" href="?page={{ page_obj.previous_page_number }}&status={{ request.GET.status|default:'' }}&keyword={{ request.GET.keyword|default:'' }}&factory={{ request.GET.factory|default:'' }}&date_from={{ request.GET.date_from|default:'' }}&date_to={{ request.GET.date_to|default:'' }}&page_size={{ page_size }}">&lt;</a>
+            {% else %}
+            <span class="page-btn disabled">&lt;</span>
+            {% endif %}
+            
+            {% for num in page_obj.paginator.page_range %}
+                {% if num == page_obj.number %}
+                <span class="page-btn active">{{ num }}</span>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <a class="page-btn" href="?page={{ num }}&status={{ request.GET.status|default:'' }}&keyword={{ request.GET.keyword|default:'' }}&factory={{ request.GET.factory|default:'' }}&date_from={{ request.GET.date_from|default:'' }}&date_to={{ request.GET.date_to|default:'' }}&page_size={{ page_size }}">{{ num }}</a>
                 {% endif %}
-                
-                {% for num in materials.paginator.page_range %}
-                {% if materials.number == num %}
-                <li class="page-item active"><span class="page-link">{{ num }}</span></li>
-                {% elif num > materials.number|add:'-3' and num < materials.number|add:'3' %}
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a>
-                </li>
-                {% endif %}
-                {% endfor %}
-                
-                {% if materials.has_next %}
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ materials.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">下一页</a>
-                </li>
-                {% endif %}
-            </ul>
-        </nav>
+            {% endfor %}
+            
+            {% if page_obj.has_next %}
+            <a class="page-btn" href="?page={{ page_obj.next_page_number }}&status={{ request.GET.status|default:'' }}&keyword={{ request.GET.keyword|default:'' }}&factory={{ request.GET.factory|default:'' }}&date_from={{ request.GET.date_from|default:'' }}&date_to={{ request.GET.date_to|default:'' }}&page_size={{ page_size }}">&gt;</a>
+            {% else %}
+            <span class="page-btn disabled">&gt;</span>
+            {% endif %}
+        </div>
     </div>
     {% endif %}
 </div>
 
-<!-- 审批模态框 -->
-<div class="modal fade" id="approveModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">审批资料</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form id="approveForm">
-                    <input type="hidden" id="approveMaterialId">
-                    <div class="mb-3">
-                        <label class="form-label">审批意见</label>
-                        <textarea class="form-control" id="approveRemark" rows="3"></textarea>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                <button type="button" class="btn btn-danger" onclick="submitApprove('reject')">驳回</button>
-                <button type="button" class="btn btn-success" onclick="submitApprove('approve')">通过</button>
-            </div>
-        </div>
-    </div>
-</div>
-{% endblock %}
-
-{% block extra_js %}
 <script>
-// 审批资料
-function approveMaterial(id) {
-    document.getElementById('approveMaterialId').value = id;
-    new bootstrap.Modal(document.getElementById('approveModal')).show();
+function doSearch() {
+    const params = new URLSearchParams();
+    const keyword = document.getElementById('searchKeyword').value.trim();
+    const factory = document.getElementById('searchFactory').value;
+    const status = document.getElementById('searchStatus').value;
+    const dateFrom = document.getElementById('searchDateFrom').value;
+    const dateTo = document.getElementById('searchDateTo').value;
+    
+    if (keyword) params.set('keyword', keyword);
+    if (factory) params.set('factory', factory);
+    if (status) params.set('status', status);
+    if (dateFrom) params.set('date_from', dateFrom);
+    if (dateTo) params.set('date_to', dateTo);
+    
+    window.location.href = '?' + params.toString();
 }
 
-// 提交审批
-function submitApprove(action) {
-    const id = document.getElementById('approveMaterialId').value;
-    const remark = document.getElementById('approveRemark').value;
-    
-    fetch(`/api/materials/${id}/${action}/`, {
+function doReset() {
+    window.location.href = '?';
+}
+
+function changePageSize(size) {
+    const params = new URLSearchParams(window.location.search);
+    params.set('page_size', size);
+    params.set('page', '1');
+    window.location.href = '?' + params.toString();
+}
+
+function generateDoc(id) {
+    if (!confirm('确定要生成资料吗？')) return;
+    fetch('/api/materials/' + id + '/generate/', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'X-CSRFToken': getCookie('csrftoken')
-        },
-        body: JSON.stringify({ remark: remark })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.status) {
-            alert('操作成功！');
-            location.reload();
-        } else {
-            alert('操作失败：' + (data.error || '未知错误'));
         }
     })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('操作失败');
+    .then(r => r.json())
+    .then(d => {
+        if (d.success) { alert('生成成功！'); location.reload(); }
+        else { alert('生成失败：' + (d.error || '未知错误')); }
     });
 }
 
-// 生成资料
-function generateMaterial(id) {
-    if (!confirm('确定要生成资料吗？')) return;
-    
-    showLoading();
-    fetch(`/api/materials/${id}/generate/`, {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': getCookie('csrftoken')
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        hideLoading();
-        if (data.success) {
-            alert('资料生成成功！');
-            location.reload();
-        } else {
-            alert('生成失败：' + (data.error || '未知错误'));
-        }
-    })
-    .catch(error => {
-        hideLoading();
-        console.error('Error:', error);
-        alert('生成失败');
-    });
-}
-
-// 导出数据
-function exportData() {
-    const params = new URLSearchParams(window.location.search);
-    params.set('format', 'excel');
-    window.location.href = `/api/materials/export/?${params.toString()}`;
-}
-
-// 获取Cookie
 function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
+    let v = null;
+    document.cookie.split(';').forEach(c => {
+        c = c.trim();
+        if (c.startsWith(name + '=')) v = decodeURIComponent(c.substring(name.length + 1));
+    });
+    return v;
 }
 </script>
 {% endblock %}

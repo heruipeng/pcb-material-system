@@ -49,10 +49,10 @@ class MaterialViewSet(viewsets.ModelViewSet):
         # 权限过滤
         user = self.request.user
         if user.role == 'viewer':
-            queryset = queryset.filter(status__in=['published', 'archived'])
+            queryset = queryset.filter(status__in=['completed', 'audited', 'archived'])
         elif user.role == 'operator':
             queryset = queryset.filter(
-                Q(creator=user) | Q(status__in=['published', 'archived'])
+                Q(creator=user) | Q(status__in=['completed', 'audited', 'archived'])
             )
         
         # 搜索条件
