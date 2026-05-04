@@ -70,7 +70,7 @@ run('python manage.py migrate')
 # ===== 5. Seed data =====
 print('\n[5/5] Seeding test data...')
 seed_script = os.path.join(BASE, 'init_data.py')
-if not os.path.exists(seed_script):
+if True:  # always overwrite
     with open(seed_script, 'w', encoding='utf-8') as f:
         f.write('''#!/usr/bin/env python
 """Seed test data"""
