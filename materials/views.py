@@ -1,12 +1,15 @@
+from django.shortcuts import render
+from django.core.paginator import Paginator
+from django.db.models import Count, Q
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
-from django.db.models import Q
 from django.utils import timezone
 
 from .models import Material, MaterialCategory, MaterialHistory, MaterialAttachment
+from core.models import Factory
 from .serializers import (
     MaterialSerializer, MaterialListSerializer,
     MaterialCategorySerializer, MaterialHistorySerializer,
@@ -17,6 +20,85 @@ from accounts.permissions import (
     PERM_MATERIAL_EDIT, PERM_MATERIAL_DELETE, PERM_MATERIAL_APPROVE
 )
 from core.utils import log_operation
+
+
+def material_list_page(request):
+    """资料总纲页面"""
+    queryset = Material.objects.select_related('factory', 'maker', 'creator').all()
+    
+    # 权限过滤
+    user = request.user
+    if user.role == 'viewer':
+        queryset = queryset.filter(status__in=['completed', 'audited', 'archived'])
+    elif user.role == 'operator':
+        queryset = queryset.filter(
+            Q(creator=user) | Q(status__in=['completed', 'audited', 'archived'])
+        )
+    
+    # 搜索
+    keyword = request.GET.get('keyword', '')
+    factory_id = request.GET.get('factory', '')
+    status_filter = request.GET.get('status', '')
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    
+    if keyword:
+        queryset = queryset.filter(
+            Q(serial_no__icontains=keyword) |
+            Q(material_no__icontains=keyword) |
+            Q(remark__icontains=keyword)
+        )
+    if factory_id:
+        queryset = queryset.filter(factory_id=factory_id)
+    if status_filter:
+        queryset = queryset.filter(status=status_filter)
+    if date_from:
+        queryset = queryset.filter(created_at__date__gte=date_from)
+    if date_to:
+        queryset = queryset.filter(created_at__date__lte=date_to)
+    
+    # 状态统计
+    status_counts = {
+        'all': Material.objects.count(),
+        'unmade': Material.objects.filter(status='unmade').count(),
+        'making': Material.objects.filter(status='making').count(),
+        'completed': Material.objects.filter(status='completed').count(),
+        'audited': Material.objects.filter(status='audited').count(),
+    }
+    
+    # 分页
+    page_size = int(request.GET.get('page_size', 20))
+    page_number = int(request.GET.get('page', 1))
+    paginator = Paginator(queryset, page_size)
+    page_obj = paginator.get_page(page_number)
+    
+    # 添加 maker_name 到每个对象
+    for item in page_obj:
+        item.maker_name = item.maker.username if item.maker else 'None'
+        item.status_display = item.get_status_display()
+    
+    context = {
+        'page_obj': page_obj,
+        'status_counts': status_counts,
+        'factories': Factory.objects.filter(is_active=True),
+        'page_size': page_size,
+    }
+    return render(request, 'materials/material_list.html', context)
+
+
+def dashboard_page(request):
+    """仪表盘首页"""
+    return render(request, 'dashboard.html', {})
+
+
+def tool_list_page(request):
+    """工具输出页面"""
+    return render(request, 'tools/tool_list.html', {})
+
+
+def report_list_page(request):
+    """报表管理页面"""
+    return render(request, 'reports/report_list.html', {})
 
 
 class MaterialCategoryViewSet(viewsets.ModelViewSet):
