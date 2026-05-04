@@ -31,7 +31,7 @@ def material_list_page(request):
     # 权限过滤
     user = request.user
     if user.role == 'viewer':
-        queryset = queryset.filter(status__in=['completed', 'audited', 'archived'])
+        queryset = queryset.filter(status__in=['approved', 'rejected', 'published', 'archived'])
     elif user.role == 'operator':
         queryset = queryset.filter(
             Q(creator=user) | Q(status__in=['completed', 'audited', 'archived'])
@@ -62,10 +62,10 @@ def material_list_page(request):
     # 状态统计
     status_counts = {
         'all': Material.objects.count(),
-        'unmade': Material.objects.filter(status='unmade').count(),
-        'making': Material.objects.filter(status='making').count(),
-        'completed': Material.objects.filter(status='completed').count(),
-        'audited': Material.objects.filter(status='audited').count(),
+        'draft': Material.objects.filter(status='draft').count(),
+        'pending': Material.objects.filter(status='pending').count(),
+        'approved': Material.objects.filter(status='approved').count(),
+        'published': Material.objects.filter(status='published').count(),
     }
     
     # 分页
@@ -145,7 +145,7 @@ class MaterialViewSet(viewsets.ModelViewSet):
         # 权限过滤
         user = self.request.user
         if user.role == 'viewer':
-            queryset = queryset.filter(status__in=['completed', 'audited', 'archived'])
+            queryset = queryset.filter(status__in=['approved', 'rejected', 'published', 'archived'])
         elif user.role == 'operator':
             queryset = queryset.filter(
                 Q(creator=user) | Q(status__in=['completed', 'audited', 'archived'])

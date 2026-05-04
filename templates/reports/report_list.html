@@ -1,201 +1,63 @@
 {% extends 'base.html' %}
-{% block title %}报表管理 - 飞针测试资料管理系统 V2.0{% endblock %}
+{% block title %}Reports{% endblock %}
 
 {% block content %}
-<!-- 统计条 -->
-<div class="filter-card" style="display:flex;gap:20px;">
-    <div style="flex:1;text-align:center;padding:16px;border-right:1px solid #EBEEF5;">
-        <div style="font-size:28px;font-weight:700;color:#409EFF;" id="rptTotal">-</div>
-        <div style="color:#909399;font-size:12px;">报表总数</div>
-    </div>
-    <div style="flex:1;text-align:center;padding:16px;border-right:1px solid #EBEEF5;">
-        <div style="font-size:28px;font-weight:700;color:#67C23A;" id="rptToday">-</div>
-        <div style="color:#909399;font-size:12px;">今日生成</div>
-    </div>
-    <div style="flex:1;text-align:center;padding:16px;border-right:1px solid #EBEEF5;">
-        <div style="font-size:28px;font-weight:700;color:#E6A23C;" id="rptWeek">-</div>
-        <div style="color:#909399;font-size:12px;">本周生成</div>
-    </div>
-    <div style="flex:1;text-align:center;padding:16px;border-right:1px solid #EBEEF5;">
-        <div style="font-size:28px;font-weight:700;color:#409EFF;" id="rptMonth">-</div>
-        <div style="color:#909399;font-size:12px;">本月生成</div>
-    </div>
-    <div style="flex:1;text-align:center;padding:16px;">
-        <div style="font-size:28px;font-weight:700;color:#F56C6C;" id="rptScheduled">-</div>
-        <div style="color:#909399;font-size:12px;">定时任务</div>
-    </div>
-</div>
-
-<!-- 筛选区 -->
 <div class="filter-card">
     <div class="filter-row">
+        <div class="filter-item"><label>Keyword:</label><input type="text" id="searchKeyword" placeholder="Report name"></div>
         <div class="filter-item">
-            <label>关键字：</label>
-            <input type="text" id="searchKeyword" placeholder="报表名称">
-        </div>
-        <div class="filter-item">
-            <label>报表类型：</label>
+            <label>Type:</label>
             <select id="searchType">
-                <option value="">全部类型</option>
-                <option value="summary">汇总报表</option>
-                <option value="detail">明细报表</option>
-                <option value="statistical">统计报表</option>
-                <option value="analysis">分析报表</option>
-                <option value="custom">自定义报表</option>
+                <option value="">All</option>
+                <option value="summary">Summary</option>
+                <option value="detail">Detail</option>
+                <option value="statistical">Statistical</option>
+                <option value="analysis">Analysis</option>
             </select>
         </div>
-        <div class="filter-item">
-            <label>日期：</label>
-            <input type="date" id="searchDate">
-        </div>
-        <button class="btn btn-primary" onclick="doSearch()"><i class="fas fa-search"></i> 查询</button>
-        <button class="btn btn-default" onclick="doReset()"><i class="fas fa-redo"></i> 重置</button>
-        <button class="btn btn-success" onclick="generateNew()"><i class="fas fa-plus"></i> 生成报表</button>
+        <button class="btn btn-primary" onclick="doSearch()">Search</button>
+        <button class="btn btn-default" onclick="doReset()">Reset</button>
     </div>
 </div>
 
-<!-- 报表列表 -->
 <div class="table-card">
-    <div style="padding:14px 16px;font-weight:600;font-size:15px;border-bottom:1px solid #EBEEF5;">
-        <i class="fas fa-file-alt" style="color:#409EFF;"></i> 报表列表
-    </div>
+    <div style="padding:14px 16px;font-weight:600;font-size:15px;border-bottom:1px solid #EBEEF5;">Report List</div>
     <table class="table">
         <thead>
             <tr>
-                <th>报表名称</th>
-                <th style="width:100px;">类型</th>
-                <th style="width:100px;">分类</th>
-                <th>描述</th>
-                <th style="width:100px;">创建人</th>
-                <th style="width:150px;">更新时间</th>
-                <th style="width:150px;">操作</th>
+                <th>Name</th>
+                <th style="width:100px;">Type</th>
+                <th style="width:100px;">Category</th>
+                <th>Description</th>
+                <th style="width:100px;">Creator</th>
+                <th style="width:150px;">Updated</th>
             </tr>
         </thead>
         <tbody id="reportTable">
-            <tr><td colspan="7"><div class="empty-state"><p>加载中...</p></div></td></tr>
-        </tbody>
-    </table>
-</div>
-
-<!-- 最近生成的报表 -->
-<div class="table-card" style="margin-top:16px;">
-    <div style="padding:14px 16px;font-weight:600;font-size:15px;border-bottom:1px solid #EBEEF5;">
-        <i class="fas fa-history" style="color:#E6A23C;"></i> 最近生成记录
-    </div>
-    <table class="table">
-        <thead>
-            <tr>
-                <th>报表名称</th>
-                <th>实例名称</th>
-                <th style="width:90px;">状态</th>
-                <th style="width:80px;">行数</th>
-                <th style="width:100px;">生成人</th>
-                <th style="width:160px;">生成时间</th>
-                <th style="width:80px;">操作</th>
-            </tr>
-        </thead>
-        <tbody id="instanceTable">
-            <tr><td colspan="7"><div class="empty-state"><p>加载中...</p></div></td></tr>
+            <tr><td colspan="6"><div class="empty-state"><p>Loading...</p></div></td></tr>
         </tbody>
     </table>
 </div>
 
 <script>
 function loadReports() {
-    const params = new URLSearchParams();
-    const kw = document.getElementById('searchKeyword').value.trim();
-    const type = document.getElementById('searchType').value;
-    if (kw) params.set('search', kw);
-    if (type) params.set('report_type', type);
-    
-    fetch('/api/reports/?' + params.toString())
-        .then(r => r.json())
-        .then(d => {
-            const tbody = document.getElementById('reportTable');
-            if (d.results?.length) {
-                tbody.innerHTML = d.results.map(r => `
-                    <tr>
-                        <td><strong>${r.name}</strong></td>
-                        <td><span class="tag" style="color:#409EFF;background:#ecf5ff;border:1px solid #b3d8ff;">${r.report_type_display || r.report_type}</span></td>
-                        <td>${r.category_name || '-'}</td>
-                        <td style="color:#909399;">${r.description || '-'}</td>
-                        <td>${r.created_by_name || '-'}</td>
-                        <td>${new Date(r.updated_at).toLocaleString('zh-CN')}</td>
-                        <td>
-                            <button class="btn btn-primary btn-sm" onclick="generateReport(${r.id})"><i class="fas fa-play"></i> 生成</button>
-                            <a href="/reports/${r.id}/" class="link-btn">详情</a>
-                        </td>
-                    </tr>
-                `).join('');
-            } else {
-                tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><i class="fas fa-inbox"></i><p>暂无报表</p></div></td></tr>';
-            }
+    var p = new URLSearchParams();
+    var kw = document.getElementById('searchKeyword').value.trim();
+    var tp = document.getElementById('searchType').value;
+    if(kw) p.set('search', kw);
+    if(tp) p.set('report_type', tp);
+    fetch('/api/reports/?' + p.toString())
+        .then(r => r.json()).then(d => {
+            var tbody = document.getElementById('reportTable');
+            if (d.results && d.results.length) {
+                tbody.innerHTML = d.results.map(function(r) {
+                    return '<tr><td><strong>'+r.name+'</strong></td><td><span class="tag" style="color:#409EFF;background:#ecf5ff;border:1px solid #b3d8ff;">'+ (r.report_type_display || r.report_type) +'</span></td><td>'+ (r.category_name || '-') +'</td><td style="color:#909399;">'+ (r.description || '-') +'</td><td>'+ (r.created_by_name || '-') +'</td><td>'+ new Date(r.updated_at).toLocaleString('zh-CN') +'</td></tr>';
+                }).join('');
+            } else { tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><p>No reports found</p></div></td></tr>'; }
         });
 }
-
-function loadInstances() {
-    fetch('/api/reports/instances/?page_size=6')
-        .then(r => r.json())
-        .then(d => {
-            const tbody = document.getElementById('instanceTable');
-            if (d.results?.length) {
-                const colors = {pending:'#E6A23C',completed:'#67C23A',failed:'#F56C6C'};
-                tbody.innerHTML = d.results.map(i => `
-                    <tr>
-                        <td>${i.report_name}</td>
-                        <td>${i.name}</td>
-                        <td><span class="tag" style="color:${colors[i.status]};background:${colors[i.status]}15;border:1px solid ${colors[i.status]}50;">${i.status_display || i.status}</span></td>
-                        <td>${i.row_count || 0}</td>
-                        <td>${i.generated_by_name || '-'}</td>
-                        <td>${new Date(i.generated_at).toLocaleString('zh-CN')}</td>
-                        <td>${i.file_url ? '<a href="'+i.file_url+'" class="link-btn" download>下载</a>' : '-'}</td>
-                    </tr>
-                `).join('');
-            } else {
-                tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><i class="fas fa-inbox"></i><p>暂无生成记录</p></div></td></tr>';
-            }
-        });
-}
-
-function loadStats() {
-    fetch('/api/reports/statistics/')
-        .then(r => r.json())
-        .then(d => {
-            document.getElementById('rptTotal').textContent = d.total_count || 0;
-            document.getElementById('rptToday').textContent = d.today_count || 0;
-            document.getElementById('rptWeek').textContent = d.week_count || 0;
-            document.getElementById('rptMonth').textContent = d.month_count || 0;
-            document.getElementById('rptScheduled').textContent = 0;
-        });
-}
-
-function generateReport(id) {
-    if (!confirm('确定生成此报表？')) return;
-    fetch('/api/reports/' + id + '/generate/', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json','X-CSRFToken':getCsrf()},
-        body: JSON.stringify({})
-    }).then(r => r.json()).then(d => {
-        alert(d.success ? '生成任务已提交！' : '生成失败');
-        loadInstances();
-    });
-}
-
-function generateNew() {
-    alert('报表生成功能 - 选择报表类型和日期后生成');
-}
-
-function doSearch() { loadReports(); loadInstances(); }
-function doReset() {
-    ['searchKeyword','searchType','searchDate'].forEach(id => document.getElementById(id).value='');
-    loadReports(); loadInstances();
-}
-
-function getCsrf() {
-    const m = document.cookie.match(/csrftoken=([^;]+)/);
-    return m ? m[1] : '';
-}
-
-loadStats(); loadReports(); loadInstances();
+function doSearch() { loadReports(); }
+function doReset() { document.getElementById('searchKeyword').value=''; document.getElementById('searchType').value=''; loadReports(); }
+loadReports();
 </script>
 {% endblock %}

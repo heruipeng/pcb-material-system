@@ -1,149 +1,82 @@
 {% extends 'base.html' %}
-{% block title %}工具输出 - 飞针测试资料管理系统 V2.0{% endblock %}
+{% block title %}Tools{% endblock %}
 
 {% block content %}
-<!-- 搜索区 -->
 <div class="filter-card">
     <div class="filter-row">
         <div class="filter-item">
-            <label>关键字：</label>
-            <input type="text" id="searchKeyword" placeholder="工具名称/流水号" style="width:200px;">
+            <label>Keyword:</label>
+            <input type="text" id="searchKeyword" placeholder="Tool name" style="width:200px;">
         </div>
         <div class="filter-item">
-            <label>工具类型：</label>
+            <label>Type:</label>
             <select id="searchType" style="width:150px;">
-                <option value="">全部类型</option>
-                <option value="fly_probe">飞针测试</option>
-                <option value="impedance">阻抗测试</option>
-                <option value="aoi">AOI检测</option>
-                <option value="xray">X-Ray检测</option>
-                <option value="ict">ICT测试</option>
-                <option value="functional">功能测试</option>
+                <option value="">All</option>
+                <option value="fly_probe">Flying Probe</option>
+                <option value="impedance">Impedance</option>
+                <option value="aoi">AOI</option>
+                <option value="xray">X-Ray</option>
             </select>
         </div>
-        <div class="filter-item">
-            <label>状态：</label>
-            <select id="searchStatus" style="width:130px;">
-                <option value="">全部状态</option>
-                <option value="pending">等待中</option>
-                <option value="running">执行中</option>
-                <option value="completed">已完成</option>
-                <option value="failed">失败</option>
-            </select>
-        </div>
-        <div class="filter-item">
-            <label>日期：</label>
-            <input type="date" id="searchDate" style="width:150px;">
-        </div>
-        <button class="btn btn-primary" onclick="doSearch()"><i class="fas fa-search"></i> 查询</button>
-        <button class="btn btn-default" onclick="doReset()"><i class="fas fa-redo"></i> 重置</button>
+        <button class="btn btn-primary" onclick="doSearch()">Search</button>
+        <button class="btn btn-default" onclick="doReset()">Reset</button>
     </div>
 </div>
 
-<!-- 工具卡片 -->
 <div class="filter-card" style="display:flex;flex-wrap:wrap;gap:16px;">
     {% for tool in tools %}
-    <a href="/tools/{{ tool.type }}/" style="flex:1;min-width:160px;text-decoration:none;color:inherit;">
-        <div style="background:#fff;border:1px solid #EBEEF5;border-radius:8px;padding:20px 16px;text-align:center;transition:all 0.2s;cursor:pointer;"
-             onmouseover="this.style.boxShadow='0 4px 12px rgba(64,158,255,0.15)';this.style.borderColor='#409EFF'"
-             onmouseout="this.style.boxShadow='none';this.style.borderColor='#EBEEF5'">
-            <i class="{{ tool.icon }} fa-2x" style="color:{{ tool.color }};margin-bottom:10px;display:block;"></i>
-            <div style="font-weight:600;font-size:15px;margin-bottom:4px;">{{ tool.name }}</div>
-            <div style="font-size:12px;color:#909399;">{{ tool.desc }}</div>
-            <div style="margin-top:10px;">
-                <span class="tag tag-已完成" style="font-size:11px;">{{ tool.count }} 次执行</span>
-            </div>
+    <div style="flex:1;min-width:160px;background:#fff;border:1px solid #EBEEF5;border-radius:8px;padding:20px 16px;text-align:center;transition:all 0.2s;"
+         onmouseover="this.style.boxShadow='0 4px 12px rgba(64,158,255,0.15)';this.style.borderColor='#409EFF'"
+         onmouseout="this.style.boxShadow='none';this.style.borderColor='#EBEEF5'">
+        <i class="{{ tool.icon }} fa-2x" style="color:{{ tool.color }};margin-bottom:10px;display:block;"></i>
+        <div style="font-weight:600;font-size:15px;margin-bottom:4px;">{{ tool.name }}</div>
+        <div style="font-size:12px;color:#909399;">{{ tool.desc }}</div>
+        <div style="margin-top:10px;">
+            <span class="tag" style="font-size:11px;color:#67C23A;background:#f0f9eb;border:1px solid #e1f3d8;">{{ tool.count }} runs</span>
         </div>
-    </a>
-    {% empty %}
-    <div style="width:100%;text-align:center;padding:40px;color:#909399;">
-        <i class="fas fa-tools fa-3x" style="margin-bottom:12px;display:block;"></i>
-        暂无工具
     </div>
+    {% empty %}
+    <div style="width:100%;text-align:center;padding:40px;color:#909399;">No tools configured</div>
     {% endfor %}
 </div>
 
-<!-- 执行记录 -->
 <div class="table-card">
     <div style="padding:14px 16px;font-weight:600;font-size:15px;border-bottom:1px solid #EBEEF5;">
-        <i class="fas fa-history" style="color:#409EFF;"></i> 执行记录
+        Execution History
     </div>
     <table class="table">
         <thead>
             <tr>
                 <th style="width:60px;">ID</th>
-                <th style="width:120px;">工具</th>
-                <th style="width:160px;">关联资料</th>
-                <th style="width:180px;">参数</th>
-                <th style="width:90px;">状态</th>
-                <th style="width:90px;">执行人</th>
-                <th style="width:150px;">开始时间</th>
-                <th style="width:150px;">完成时间</th>
-                <th style="width:80px;">耗时</th>
-                <th style="width:100px;">操作</th>
+                <th style="width:120px;">Tool</th>
+                <th style="width:160px;">Material</th>
+                <th style="width:90px;">Status</th>
+                <th style="width:90px;">Executor</th>
+                <th style="width:150px;">Started</th>
+                <th style="width:80px;">Duration</th>
             </tr>
         </thead>
         <tbody id="executionTable">
-            <tr><td colspan="10"><div class="empty-state"><p>加载中...</p></div></td></tr>
+            <tr><td colspan="7"><div class="empty-state"><p>Loading...</p></div></td></tr>
         </tbody>
     </table>
 </div>
 
 <script>
-const toolIcons = {
-    fly_probe: 'fa-bolt', impedance: 'fa-wave-square', aoi: 'fa-eye',
-    xray: 'fa-x-ray', ict: 'fa-microchip', functional: 'fa-cogs',
-};
-const toolColors = {
-    fly_probe: '#409EFF', impedance: '#67C23A', aoi: '#409EFF',
-    xray: '#E6A23C', ict: '#F56C6C', functional: '#909399',
-};
-const statusColor = {
-    pending: '#E6A23C', running: '#409EFF', completed: '#67C23A', failed: '#F56C6C', cancelled: '#909399'
-};
-
+var statusColor = {pending:'#E6A23C', running:'#409EFF', completed:'#67C23A', failed:'#F56C6C'};
 function loadExecutions() {
-    const params = new URLSearchParams();
-    const kw = document.getElementById('searchKeyword').value.trim();
-    const type = document.getElementById('searchType').value;
-    const status = document.getElementById('searchStatus').value;
-    if (kw) params.set('search', kw);
-    if (type) params.set('tool__tool_type', type);
-    if (status) params.set('status', status);
-    
-    fetch('/api/tools/executions/?page_size=10&' + params.toString())
-        .then(r => r.json())
-        .then(d => {
-            const tbody = document.getElementById('executionTable');
-            if (d.results?.length) {
-                tbody.innerHTML = d.results.map(e => `
-                    <tr>
-                        <td>${e.id}</td>
-                        <td>${e.tool_name || '-'}</td>
-                        <td>${e.material_serial_no || '-'}</td>
-                        <td style="font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
-                            title="${JSON.stringify(e.params || {})}">${JSON.stringify(e.params || {}).substring(0, 30)}</td>
-                        <td><span class="tag" style="color:${statusColor[e.status]};background:${statusColor[e.status]}15;border:1px solid ${statusColor[e.status]}50;">${e.status_display || e.status}</span></td>
-                        <td>${e.executor_name || '-'}</td>
-                        <td>${e.started_at ? new Date(e.started_at).toLocaleString('zh-CN') : '-'}</td>
-                        <td>${e.completed_at ? new Date(e.completed_at).toLocaleString('zh-CN') : '-'}</td>
-                        <td>${e.duration ? e.duration + 's' : '-'}</td>
-                        <td>
-                            <a href="/tools/executions/${e.id}/" class="link-btn">详情</a>
-                        </td>
-                    </tr>
-                `).join('');
-            } else {
-                tbody.innerHTML = '<tr><td colspan="10"><div class="empty-state"><i class="fas fa-inbox"></i><p>暂无执行记录</p></div></td></tr>';
-            }
+    fetch('/api/tools/executions/?page_size=10')
+        .then(r => r.json()).then(d => {
+            var tbody = document.getElementById('executionTable');
+            if (d.results && d.results.length) {
+                tbody.innerHTML = d.results.map(function(e) {
+                    return '<tr><td>'+e.id+'</td><td>'+ (e.tool_name || '-') +'</td><td>'+ (e.material_serial_no || '-') +'</td><td><span class="tag" style="color:'+(statusColor[e.status]||'#909399')+'">'+ (e.status_display || e.status) +'</span></td><td>'+ (e.executor_name || '-') +'</td><td>'+ (e.started_at ? new Date(e.started_at).toLocaleString('zh-CN') : '-') +'</td><td>'+ (e.duration ? e.duration+'s' : '-') +'</td></tr>';
+                }).join('');
+            } else { tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><p>No execution records</p></div></td></tr>'; }
         });
 }
-
 function doSearch() { loadExecutions(); }
-function doReset() {
-    ['searchKeyword','searchType','searchStatus','searchDate'].forEach(id => document.getElementById(id).value='');
-    loadExecutions();
-}
+function doReset() { document.getElementById('searchKeyword').value=''; document.getElementById('searchType').value=''; loadExecutions(); }
 loadExecutions();
 </script>
 {% endblock %}
