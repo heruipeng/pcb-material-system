@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>PCB - Login</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#f0f2f5;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;color:#1d2129}
+.box{width:400px;background:#fff;border-radius:12px;box-shadow:0 2px 16px rgba(0,0,0,.08);padding:48px 40px}
+.lg{width:56px;height:56px;background:#165dff;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:28px}
+.hd{text-align:center;margin-bottom:40px}
+.hd h1{font-size:22px;font-weight:600;margin-top:12px}
+.hd p{color:#86909c;font-size:13px;margin-top:4px}
+.fg{margin-bottom:20px}
+.fg label{display:block;font-size:13px;font-weight:500;margin-bottom:6px}
+.fg input{width:100%;padding:10px 14px;border:1px solid #e4e7eb;border-radius:6px;font-size:14px;background:#fafbfc;outline:none;transition:.2s}
+.fg input:focus{border-color:#165dff;box-shadow:0 0 0 3px rgba(22,93,255,.1);background:#fff}
+.err{background:#ffece8;color:#f53f3f;padding:10px 14px;border-radius:6px;font-size:13px;margin-bottom:16px}
+.btn{width:100%;padding:11px;background:#165dff;color:#fff;border:none;border-radius:6px;font-size:15px;font-weight:500;cursor:pointer}
+.btn:hover{background:#0e48d6}
+.ft{text-align:center;margin-top:24px;color:#86909c;font-size:12px}
+</style>
+</head>
+<body>
+<div class="box">
+<div class="hd"><div class="lg">&#x229E;</div><h1>PCB Engineering System</h1><p>Flying Probe Test Data Management</p></div>
+{% if messages %}{% for msg in messages %}<div class="err">{{ msg }}</div>{% endfor %}{% endif %}
+<form method="post" action="{% url 'login' %}">{% csrf_token %}
+<div class="fg"><label>Username</label><input type="text" name="username" placeholder="Enter username" required autofocus></div>
+<div class="fg"><label>Password</label><input type="password" name="password" placeholder="Enter password" required></div>
+<button type="submit" class="btn">Sign In</button>
+</form>
+<div class="ft">Demo: admin / admin123</div>
+</div>
+</body>
+</html>

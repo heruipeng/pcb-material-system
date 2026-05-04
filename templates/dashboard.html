@@ -1,191 +1,230 @@
-{% extends 'base.html' %}
-
-{% block title %}首页 - PCB工程资料管理系统{% endblock %}
-
-{% block content %}
-<div class="container-fluid">
-    <!-- 统计卡片 -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="stat-card">
-                <div class="stat-icon bg-primary bg-opacity-10 text-primary">
-                    <i class="fas fa-folder-open"></i>
-                </div>
-                <div class="stat-value" id="materialTotal">0</div>
-                <div class="stat-label">资料总数</div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card">
-                <div class="stat-icon bg-success bg-opacity-10 text-success">
-                    <i class="fas fa-check-circle"></i>
-                </div>
-                <div class="stat-value" id="completedTotal">0</div>
-                <div class="stat-label">已完成</div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card">
-                <div class="stat-icon bg-warning bg-opacity-10 text-warning">
-                    <i class="fas fa-clock"></i>
-                </div>
-                <div class="stat-value" id="pendingTotal">0</div>
-                <div class="stat-label">待处理</div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card">
-                <div class="stat-icon bg-info bg-opacity-10 text-info">
-                    <i class="fas fa-tools"></i>
-                </div>
-                <div class="stat-value" id="toolTotal">0</div>
-                <div class="stat-label">工具执行</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 快捷操作 -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <i class="fas fa-bolt"></i> 快捷操作
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-2">
-                            <a href="/materials/create/" class="btn btn-success w-100">
-                                <i class="fas fa-plus"></i> 新建资料
-                            </a>
-                        </div>
-                        <div class="col-md-2">
-                            <a href="/tools/" class="btn btn-primary w-100">
-                                <i class="fas fa-cog"></i> 工具输出
-                            </a>
-                        </div>
-                        <div class="col-md-2">
-                            <a href="/reports/" class="btn btn-info w-100">
-                                <i class="fas fa-chart-bar"></i> 生成报表
-                            </a>
-                        </div>
-                        <div class="col-md-2">
-                            <a href="/materials/" class="btn btn-outline-primary w-100">
-                                <i class="fas fa-list"></i> 资料列表
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 最近资料和待办 -->
-    <div class="row">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <span><i class="fas fa-history"></i> 最近资料</span>
-                    <a href="/materials/" class="btn btn-sm btn-outline-primary">查看全部</a>
-                </div>
-                <div class="card-body p-0">
-                    <table class="table table-hover mb-0">
-                        <thead>
-                            <tr>
-                                <th>流水号</th>
-                                <th>料号</th>
-                                <th>版本</th>
-                                <th>状态</th>
-                                <th>创建时间</th>
-                            </tr>
-                        </thead>
-                        <tbody id="recentMaterials">
-                            <tr>
-                                <td colspan="5" class="text-center text-muted py-3">加载中...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-header">
-                    <i class="fas fa-bell"></i> 待办事项
-                </div>
-                <div class="card-body" id="todoList">
-                    <div class="text-center text-muted py-3">加载中...</div>
-                </div>
-            </div>
-        </div>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>PCB Engineering System</title>
+<style>
+:root{--bg:#f0f2f5;--s:#fff;--b:#e4e7eb;--t:#1d2129;--m:#86909c;--a:#165dff;--g:#00b42a;--o:#ff7d00;--r:#f53f3f}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;color:var(--t);font-size:14px}
+/* Top bar */
+.tb{height:52px;background:var(--s);border-bottom:1px solid var(--b);display:flex;align-items:center;padding:0 24px;position:sticky;top:0;z-index:100;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.tb .l{font-size:16px;font-weight:600;text-decoration:none;color:var(--t)}
+.tb .l::before{content:"\229E ";color:var(--a)}
+.tb .u{margin-left:auto;display:flex;align-items:center;gap:12px}
+.tb .u span{color:var(--m);font-size:13px}
+.tb .u a{color:var(--a);text-decoration:none;font-size:13px;padding:4px 12px;border:1px solid var(--a);border-radius:4px}
+.tb .u a:hover{background:#e8f0fe}
+/* Tabs */
+.ts{background:var(--s);border-bottom:1px solid var(--b);padding:0 24px;display:flex}
+.t{padding:12px 24px;font-size:14px;font-weight:500;color:var(--m);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;transition:.15s}
+.t:hover{color:var(--a)}.t.ac{color:var(--a);border-bottom-color:var(--a)}
+/* Content */
+.ct{max-width:1400px;margin:0 auto;padding:24px}
+.pn{display:none}.pn.ac{display:block}
+/* Stats */
+.st{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+.sc{background:var(--s);border:1px solid var(--b);border-radius:8px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.sc .v{font-size:32px;font-weight:700;color:var(--a)}
+.sc .la{font-size:13px;color:var(--m);margin-top:4px}
+/* Filter bar */
+.fb{background:var(--s);border:1px solid var(--b);border-radius:8px;padding:16px 20px;margin-bottom:16px;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.fg{display:flex;flex-direction:column;gap:4px}
+.fg label{font-size:12px;color:var(--m);font-weight:500}
+.fg input,.fg select{padding:7px 12px;border:1px solid var(--b);border-radius:6px;font-size:13px;background:#fafbfc;min-width:140px;outline:none;color:var(--t)}
+.fg input:focus,.fg select:focus{border-color:var(--a);box-shadow:0 0 0 2px rgba(22,93,255,.08);background:#fff}
+.bt{display:inline-flex;align-items:center;gap:6px;padding:7px 18px;border:none;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;text-decoration:none}
+.bt-p{background:var(--a);color:#fff}.bt-p:hover{background:#0e48d6}
+.bt-r{background:#fff;color:var(--t);border:1px solid var(--b)}.bt-r:hover{border-color:var(--a);color:var(--a)}
+/* Table */
+.tw{background:var(--s);border:1px solid var(--b);border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:#f7f8fa;color:var(--m);font-weight:600;font-size:12px;padding:10px 14px;text-align:left;border-bottom:1px solid var(--b);white-space:nowrap}
+td{padding:10px 14px;border-bottom:1px solid var(--b)}
+tr:hover td{background:#f7f8fa}
+/* Badges */
+.bg{display:inline-block;padding:2px 10px;border-radius:10px;font-size:12px;font-weight:500}
+.bg-s{color:var(--g);background:#e8ffea}
+.bg-p{color:var(--o);background:#fff7e8}
+.bg-d{color:var(--m);background:#f2f3f5}
+.bg-e{color:var(--r);background:#ffece8}
+.lk{color:var(--a);text-decoration:none;cursor:pointer}.lk:hover{text-decoration:underline}
+.em{text-align:center;padding:60px 20px;color:var(--m)}
+.ft{text-align:center;padding:20px;color:var(--m);font-size:12px}
+/* Tool list */
+.tool-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.tool-card{background:var(--s);border:1px solid var(--b);border-radius:8px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.04);transition:.15s}
+.tool-card:hover{box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.tool-card h3{font-size:15px;font-weight:600;margin-bottom:8px;color:var(--t)}
+.tool-card .meta{font-size:12px;color:var(--m);margin-bottom:4px}
+.tool-card .desc{font-size:13px;color:var(--m);margin-top:8px}
+.top-actions{display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<div class="tb">
+    <a href="/" class="l">PCB Engineering System</a>
+    <div class="u">
+        <span>{{ request.user.username }} <strong style="color:var(--a)">[{{ request.user.get_role_display }}]</strong></span>
+        <a href="{% url 'logout' %}">Sign Out</a>
     </div>
 </div>
 
+<div class="ts">
+    <button class="t ac" onclick="sw('m')">Materials</button>
+    <button class="t" onclick="sw('r')">Reports</button>
+    <button class="t" onclick="sw('a')">Admin</button>
+</div>
+
+<div class="ct">
+
+<!-- ===== Materials Tab ===== -->
+<div id="pn-m" class="pn ac">
+    <div class="st">
+        <div class="sc"><div class="v">{{ total_materials }}</div><div class="la">Total Materials</div></div>
+        <div class="sc"><div class="v">{{ material_categories.count }}</div><div class="la">Categories</div></div>
+        <div class="sc"><div class="v">{{ total_tools }}</div><div class="la">Available Tools</div></div>
+        <div class="sc"><div class="v">{{ factories.count }}</div><div class="la">Factories</div></div>
+    </div>
+
+    <div class="fb">
+        <div class="fg"><label>Keyword</label><input id="kw-m" placeholder="Serial No / PN"></div>
+        <div class="fg"><label>Factory</label><select id="f-m"><option value="">All</option>{% for f in factories %}<option value="{{ f.code }}">{{ f.name }}</option>{% endfor %}</select></div>
+        <div class="fg"><label>Status</label><select id="s-m"><option value="">All</option>{% for c,l in material_status_choices %}<option value="{{ c }}">{{ l }}</option>{% endfor %}</select></div>
+        <button class="bt bt-p" onclick="ft('mt')">Search</button>
+        <button class="bt bt-r" onclick="rf('mt',['kw-m','f-m','s-m'])">Reset</button>
+    </div>
+
+    <div class="tw">
+        <table id="mt">
+            <thead><tr><th>Serial ID</th><th>Factory</th><th>Part No</th><th>Version</th><th>Category</th><th>Remark</th><th>Status</th><th>Maker</th><th>Created</th></tr></thead>
+            <tbody>
+                {% for m in materials %}
+                <tr data-factory="{{ m.factory.code }}" data-status="{{ m.status }}" data-kw="{{ m.serial_no }} {{ m.material_no }}">
+                    <td><span class="lk">{{ m.serial_no }}</span></td>
+                    <td>{{ m.factory.code }}</td>
+                    <td>{{ m.material_no }}</td>
+                    <td>{{ m.version_code }}</td>
+                    <td>{{ m.category.name|default:"-" }}</td>
+                    <td>{{ m.remark|default:"-" }}</td>
+                    <td>
+                        {% if m.status == 'approved' or m.status == 'published' %}
+                        <span class="bg bg-s">{{ m.get_status_display }}</span>
+                        {% elif m.status == 'pending' %}
+                        <span class="bg bg-p">{{ m.get_status_display }}</span>
+                        {% elif m.status == 'rejected' %}
+                        <span class="bg bg-e">{{ m.get_status_display }}</span>
+                        {% else %}
+                        <span class="bg bg-d">{{ m.get_status_display }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ m.maker.username|default:"-" }}</td>
+                    <td>{{ m.created_at|date:"Y-m-d H:i" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="9" class="em">No material data</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Tools section -->
+    <h3 style="margin:24px 0 16px;font-size:16px;font-weight:600">Available Tools</h3>
+    <div class="tool-grid">
+        {% for t in tools %}
+        <div class="tool-card">
+            <h3>{{ t.name }}</h3>
+            <div class="meta">Code: {{ t.code }} | Type: {{ t.get_tool_type_display }}</div>
+            <div class="meta">Category: {{ t.category.name }} | v{{ t.version }}</div>
+            <div class="desc">{{ t.description|default:"No description" }}</div>
+        </div>
+        {% empty %}
+        <div class="em" style="grid-column:1/-1">No tools configured</div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- ===== Reports Tab ===== -->
+<div id="pn-r" class="pn">
+    <div class="st">
+        <div class="sc"><div class="v">{{ total_reports }}</div><div class="la">Total Reports</div></div>
+        <div class="sc"><div class="v">{{ report_categories.count }}</div><div class="la">Report Categories</div></div>
+    </div>
+
+    <div class="fb">
+        <div class="fg"><label>Keyword</label><input id="kw-r" placeholder="Report Name / Code"></div>
+        <div class="fg"><label>Category</label><select id="c-r"><option value="">All</option>{% for c in report_categories %}<option value="{{ c.code }}">{{ c.name }}</option>{% endfor %}</select></div>
+        <button class="bt bt-p" onclick="ft('rt')">Search</button>
+        <button class="bt bt-r" onclick="rf('rt',['kw-r','c-r'])">Reset</button>
+    </div>
+
+    <div class="tw">
+        <table id="rt">
+            <thead><tr><th>Code</th><th>Name</th><th>Category</th><th>Type</th><th>Description</th><th>Created</th></tr></thead>
+            <tbody>
+                {% for r in reports %}
+                <tr data-category="{{ r.category.code }}" data-kw="{{ r.name }} {{ r.code }}">
+                    <td><span class="lk">{{ r.code }}</span></td>
+                    <td>{{ r.name }}</td>
+                    <td>{{ r.category.name|default:"-" }}</td>
+                    <td>{{ r.get_report_type_display }}</td>
+                    <td>{{ r.description|default:"-" }}</td>
+                    <td>{{ r.created_at|date:"Y-m-d H:i" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="em">No report data</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ===== Admin Tab ===== -->
+<div id="pn-a" class="pn">
+    <div class="tw" style="padding:60px;text-align:center">
+        <div style="font-size:48px;margin-bottom:16px;opacity:.3">&#x2699;</div>
+        <p style="font-size:16px;font-weight:500;margin-bottom:8px">Django Admin Console</p>
+        <p style="color:var(--m);margin-bottom:24px">User management · Permissions · System settings</p>
+        <a href="/admin/" class="bt bt-p" style="text-decoration:none;padding:10px 32px;font-size:14px">Open Admin &rarr;</a>
+    </div>
+</div>
+
+</div>
+
+<div class="ft">PCB Engineering System v2.0 &copy; 2026</div>
+
 <script>
-// 加载仪表盘数据
-function loadDashboardStats() {
-    fetch('/api/core/dashboard-stats/')
-        .then(response => response.json())
-        .then(data => {
-            // 更新统计卡片
-            document.getElementById('materialTotal').textContent = data.material_stats?.total || 0;
-            document.getElementById('completedTotal').textContent = data.material_stats?.month || 0;
-            document.getElementById('pendingTotal').textContent = data.material_stats?.pending || 0;
-            document.getElementById('toolTotal').textContent = data.tool_stats?.total || 0;
-        })
-        .catch(error => console.error('加载统计数据失败:', error));
+function sw(n){
+    var tabs={m:1,r:2,a:3};
+    document.querySelectorAll('.t').forEach(function(t,i){t.classList.toggle('ac',i+1===tabs[n])});
+    document.querySelectorAll('.pn').forEach(function(p){p.classList.remove('ac')});
+    document.getElementById('pn-'+n).classList.add('ac');
 }
-
-// 加载最近资料
-function loadRecentMaterials() {
-    fetch('/api/materials/?page_size=5&ordering=-created_at')
-        .then(response => response.json())
-        .then(data => {
-            const tbody = document.getElementById('recentMaterials');
-            if (data.results && data.results.length > 0) {
-                tbody.innerHTML = data.results.map(m => `
-                    <tr>
-                        <td>${m.serial_no}</td>
-                        <td>${m.material_no}</td>
-                        <td>${m.version_code}</td>
-                        <td><span class="status-badge status-${m.status}">${m.status_display}</span></td>
-                        <td>${new Date(m.created_at).toLocaleString('zh-CN')}</td>
-                    </tr>
-                `).join('');
-            } else {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">暂无数据</td></tr>';
-            }
-        })
-        .catch(error => console.error('加载最近资料失败:', error));
+function ft(id){
+    var rows=document.querySelectorAll('#'+id+' tbody tr');
+    var p=id==='mt'?'m':'r';
+    var kw=(document.getElementById('kw-'+p)?.value||'').toLowerCase();
+    var fac=document.getElementById('f-'+p)?.value||'';
+    var sta=document.getElementById('s-'+p)?.value||'';
+    var cat=document.getElementById('c-'+p)?.value||'';
+    rows.forEach(function(row){
+        var ok=(!kw||(row.dataset.kw||'').toLowerCase().indexOf(kw)>-1)
+            &&(!fac||(row.dataset.factory||'')===fac)
+            &&(!sta||(row.dataset.status||'')===sta)
+            &&(!cat||(row.dataset.category||'')===cat);
+        row.style.display=ok?'':'none';
+    });
 }
-
-// 加载待办事项
-function loadTodoList() {
-    fetch('/api/materials/?status=pending&page_size=5')
-        .then(response => response.json())
-        .then(data => {
-            const container = document.getElementById('todoList');
-            if (data.results && data.results.length > 0) {
-                container.innerHTML = data.results.map(m => `
-                    <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-light rounded">
-                        <div>
-                            <div class="fw-bold">${m.serial_no}</div>
-                            <small class="text-muted">${m.material_no}</small>
-                        </div>
-                        <a href="/materials/${m.id}/" class="btn btn-sm btn-outline-primary">处理</a>
-                    </div>
-                `).join('');
-            } else {
-                container.innerHTML = '<div class="text-center text-muted py-3">暂无待办事项</div>';
-            }
-        })
-        .catch(error => console.error('加载待办事项失败:', error));
+function rf(id,ids){
+    ids.forEach(function(i){var e=document.getElementById(i);if(e)e.value='';});
+    ft(id);
 }
-
-// 页面加载完成后初始化
-document.addEventListener('DOMContentLoaded', function() {
-    loadDashboardStats();
-    loadRecentMaterials();
-    loadTodoList();
+document.querySelectorAll('.fb input').forEach(function(inp){
+    inp.addEventListener('keydown',function(e){
+        if(e.key==='Enter')ft(inp.closest('.pn').querySelector('table').id);
+    });
 });
 </script>
-{% endblock %}
+</body>
+</html>
