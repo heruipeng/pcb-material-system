@@ -9,7 +9,7 @@ def run(cmd):
     r = subprocess.run(cmd, shell=True, cwd=BASE, capture_output=True, text=True)
     if r.stdout: print(r.stdout.strip())
     if r.returncode != 0:
-        print(f'  [ERR] {r.stderr.strip()[:500]}')
+        print(f'  [ERR] {r.stderr.strip()[:2000]}')
         return False
     return True
 
@@ -63,7 +63,7 @@ print('  [INFO] MySQL: 192.168.127.131:3306')
 # Auto-create database if not exists
 try:
     import pymysql
-    conn = pymysql.connect(host='192.168.127.131', user='root', password='MyPassword123!@#', charset='utf8mb4')
+    conn = pymysql.connect(host='192.168.127.131', user='root', password='MyPassword123!@#', charset='utf8mb4', connect_timeout=10)
     conn.cursor().execute('CREATE DATABASE IF NOT EXISTS test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci')
     conn.close()
     print('  [OK] Database "test" ready')
