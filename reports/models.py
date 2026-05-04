@@ -34,7 +34,8 @@ class Report(models.Model):
     category = models.ForeignKey(ReportCategory, on_delete=models.SET_NULL, null=True, verbose_name='分类')
     report_type = models.CharField('报表类型', max_length=20, choices=REPORT_TYPE_CHOICES)
     description = models.TextField('描述', blank=True)
-    
+    sort_order = models.IntegerField(default=0, verbose_name='排序')
+
     # 报表配置
     query_sql = models.TextField('查询SQL', blank=True)
     query_params = models.JSONField('查询参数', default=dict, blank=True)

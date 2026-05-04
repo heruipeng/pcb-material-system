@@ -38,7 +38,8 @@ class Tool(models.Model):
     tool_type = models.CharField('工具类型', max_length=20, choices=TOOL_TYPE_CHOICES)
     description = models.TextField('描述', blank=True)
     version = models.CharField('版本', max_length=20, default='1.0')
-    
+    sort_order = models.IntegerField(default=0, verbose_name='排序')
+
     # 配置信息
     config_template = models.JSONField('配置模板', default=dict, blank=True)
     default_params = models.JSONField('默认参数', default=dict, blank=True)
