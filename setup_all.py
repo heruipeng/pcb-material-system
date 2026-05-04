@@ -2,7 +2,7 @@
 """PCB System - Complete setup: fix all bugs, migrate, seed, ready to run"""
 import os, sys, subprocess
 
-BASE = r'D:\pcb_system'
+BASE = os.path.dirname(os.path.abspath(__file__))
 
 def run(cmd):
     print(f'  >>> {cmd}')
