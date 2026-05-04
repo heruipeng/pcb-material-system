@@ -1,47 +1,48 @@
 {% extends 'base.html' %}
-{% block title %}Reports{% endblock %}
+{% block title %}报表管理{% endblock %}
 
 {% block content %}
 <div class="filter-card">
     <div class="filter-row">
-        <div class="filter-item"><label>Keyword:</label><input type="text" id="searchKeyword" placeholder="Report name"></div>
+        <div class="filter-item"><label>关键字：</label><input type="text" id="searchKeyword" placeholder="报表名称"></div>
         <div class="filter-item">
-            <label>Type:</label>
+            <label>类型：</label>
             <select id="searchType">
-                <option value="">All</option>
-                <option value="summary">Summary</option>
-                <option value="detail">Detail</option>
-                <option value="statistical">Statistical</option>
-                <option value="analysis">Analysis</option>
+                <option value="">全部</option>
+                <option value="summary">汇总报表</option>
+                <option value="detail">明细报表</option>
+                <option value="statistical">统计报表</option>
+                <option value="analysis">分析报表</option>
             </select>
         </div>
-        <button class="btn btn-primary" onclick="doSearch()">Search</button>
-        <button class="btn btn-default" onclick="doReset()">Reset</button>
-        <button class="btn btn-success" onclick="generateReport()">Generate</button>
+        <button class="btn btn-primary" onclick="doSearch()">查询</button>
+        <button class="btn btn-default" onclick="doReset()">重置</button>
+        <button class="btn btn-success" onclick="generateReport()">生成报表</button>
     </div>
 </div>
 
 <div class="table-card">
-    <div style="padding:14px 16px;font-weight:600;font-size:15px;border-bottom:1px solid #EBEEF5;">Report List</div>
+    <div style="padding:14px 16px;font-weight:600;font-size:15px;border-bottom:1px solid #EBEEF5;">报表列表</div>
     <table class="table">
         <thead>
             <tr>
-                <th>Name</th>
-                <th style="width:100px;">Type</th>
-                <th style="width:100px;">Category</th>
-                <th>Description</th>
-                <th style="width:100px;">Creator</th>
-                <th style="width:150px;">Updated</th>
-                <th style="width:100px;">Actions</th>
+                <th>报表名称</th>
+                <th style="width:100px;">类型</th>
+                <th style="width:100px;">分类</th>
+                <th>描述</th>
+                <th style="width:100px;">创建人</th>
+                <th style="width:150px;">更新时间</th>
+                <th style="width:100px;">操作</th>
             </tr>
         </thead>
         <tbody id="reportTable">
-            <tr><td colspan="7"><div class="empty-state"><p>Loading...</p></div></td></tr>
+            <tr><td colspan="7"><div class="empty-state"><p>加载中...</p></div></td></tr>
         </tbody>
     </table>
 </div>
 
 <script>
+var typeName = {summary:'汇总报表', detail:'明细报表', statistical:'统计报表', analysis:'分析报表', custom:'自定义报表'};
 function loadReports() {
     var p = new URLSearchParams();
     var kw = document.getElementById('searchKeyword').value.trim();
@@ -53,21 +54,21 @@ function loadReports() {
             var tb = document.getElementById('reportTable');
             if (d.results && d.results.length) {
                 tb.innerHTML = d.results.map(function(r) {
-                    return '<tr><td><strong>'+r.name+'</strong></td><td><span class="tag" style="color:#409EFF;background:#ecf5ff;border:1px solid #b3d8ff;">'+ (r.report_type_display || r.report_type) +'</span></td><td>'+ (r.category_name || '-') +'</td><td style="color:#909399;">'+ (r.description || '-') +'</td><td>'+ (r.created_by_name || '-') +'</td><td>'+ new Date(r.updated_at).toLocaleString('zh-CN') +'</td><td><a href="/reports/'+r.id+'/" class="link-btn">Detail</a> <a href="javascript:void(0)" class="link-btn" onclick="genOne('+r.id+')">Run</a></td></tr>';
+                    return '<tr><td><strong>'+r.name+'</strong></td><td><span class="tag" style="color:#409EFF;background:#ecf5ff;border:1px solid #b3d8ff;">'+ (typeName[r.report_type] || r.report_type) +'</span></td><td>'+ (r.category_name || '-') +'</td><td style="color:#909399;">'+ (r.description || '-') +'</td><td>'+ (r.created_by_name || '-') +'</td><td>'+ new Date(r.updated_at).toLocaleString('zh-CN') +'</td><td><a href="/reports/'+r.id+'/" class="link-btn">详情</a> <a href="javascript:void(0)" class="link-btn" onclick="genOne('+r.id+')">生成</a></td></tr>';
                 }).join('');
-            } else { tb.innerHTML = '<tr><td colspan="7"><div class="empty-state"><p>No reports found</p></div></td></tr>'; }
+            } else { tb.innerHTML = '<tr><td colspan="7"><div class="empty-state"><p>暂无报表</p></div></td></tr>'; }
         });
 }
-function generateReport() { alert('Generate Report: select options to generate a new report instance.'); }
+function generateReport() { alert('请选择报表后点击"生成"按钮创建报表实例。'); }
 function genOne(id) {
-    if (!confirm('Generate report #' + id + '?')) return;
+    if (!confirm('确定生成此报表？')) return;
     fetch('/api/reports/' + id + '/generate/', {
         method: 'POST',
         headers: {'Content-Type':'application/json','X-CSRFToken':getCsrf()},
         body: JSON.stringify({})
     }).then(r => r.json()).then(function(d) {
-        if (d.success) { alert('Job submitted! Instance ID: ' + d.instance_id); loadReports(); }
-        else { alert('Failed: ' + (d.error || 'unknown')); }
+        if (d.success) { alert('生成成功！实例ID：' + d.instance_id); loadReports(); }
+        else { alert('生成失败：' + (d.error || '未知错误')); }
     });
 }
 function doSearch() { loadReports(); }

@@ -1,25 +1,25 @@
 {% extends 'base.html' %}
-{% block title %}Tools{% endblock %}
+{% block title %}工具输出{% endblock %}
 
 {% block content %}
 <div class="filter-card">
     <div class="filter-row">
         <div class="filter-item">
-            <label>Keyword:</label>
-            <input type="text" id="searchKeyword" placeholder="Tool name" style="width:200px;">
+            <label>关键字：</label>
+            <input type="text" id="searchKeyword" placeholder="工具名称" style="width:200px;">
         </div>
         <div class="filter-item">
-            <label>Type:</label>
+            <label>类型：</label>
             <select id="searchType" style="width:150px;">
-                <option value="">All</option>
-                <option value="fly_probe">Flying Probe</option>
-                <option value="impedance">Impedance</option>
-                <option value="aoi">AOI</option>
-                <option value="xray">X-Ray</option>
+                <option value="">全部</option>
+                <option value="fly_probe">飞针测试</option>
+                <option value="impedance">阻抗测试</option>
+                <option value="aoi">AOI检测</option>
+                <option value="xray">X-Ray检测</option>
             </select>
         </div>
-        <button class="btn btn-primary" onclick="doSearch()">Search</button>
-        <button class="btn btn-default" onclick="doReset()">Reset</button>
+        <button class="btn btn-primary" onclick="doSearch()">查询</button>
+        <button class="btn btn-default" onclick="doReset()">重置</button>
     </div>
 </div>
 
@@ -33,46 +33,52 @@
             <div style="font-weight:600;font-size:15px;margin-bottom:4px;">{{ tool.name }}</div>
             <div style="font-size:12px;color:#909399;">{{ tool.desc }}</div>
             <div style="margin-top:10px;">
-                <span class="tag" style="font-size:11px;color:#67C23A;background:#f0f9eb;border:1px solid #e1f3d8;">{{ tool.count }} runs</span>
+                <span class="tag" style="font-size:11px;color:#67C23A;background:#f0f9eb;border:1px solid #e1f3d8;">{{ tool.count }} 次执行</span>
             </div>
         </div>
     </a>
     {% empty %}
-    <div style="width:100%;text-align:center;padding:40px;color:#909399;">No tools configured</div>
+    <div style="width:100%;text-align:center;padding:40px;color:#909399;">暂无工具</div>
     {% endfor %}
 </div>
 
 <div class="table-card">
-    <div style="padding:14px 16px;font-weight:600;font-size:15px;border-bottom:1px solid #EBEEF5;">Execution History</div>
+    <div style="padding:14px 16px;font-weight:600;font-size:15px;border-bottom:1px solid #EBEEF5;">执行记录</div>
     <table class="table">
         <thead>
             <tr>
                 <th style="width:60px;">ID</th>
-                <th style="width:120px;">Tool</th>
-                <th style="width:160px;">Material</th>
-                <th style="width:90px;">Status</th>
-                <th style="width:90px;">Executor</th>
-                <th style="width:150px;">Started</th>
-                <th style="width:80px;">Duration</th>
+                <th style="width:120px;">工具</th>
+                <th style="width:160px;">关联资料</th>
+                <th style="width:90px;">状态</th>
+                <th style="width:90px;">执行人</th>
+                <th style="width:150px;">开始时间</th>
+                <th style="width:80px;">耗时</th>
             </tr>
         </thead>
         <tbody id="executionTable">
-            <tr><td colspan="7"><div class="empty-state"><p>Loading...</p></div></td></tr>
+            <tr><td colspan="7"><div class="empty-state"><p>加载中...</p></div></td></tr>
         </tbody>
     </table>
 </div>
 
 <script>
 var statusColor = {pending:'#E6A23C', running:'#409EFF', completed:'#67C23A', failed:'#F56C6C'};
+var statusName = {pending:'等待中', running:'执行中', completed:'已完成', failed:'失败', cancelled:'已取消'};
 function loadExecutions() {
-    fetch('/api/tools/executions/?page_size=10')
+    var kw = document.getElementById('searchKeyword').value.trim();
+    var tp = document.getElementById('searchType').value;
+    var url = '/api/tools/executions/?page_size=10';
+    if(tp) url += '&tool__tool_type=' + tp;
+    if(kw) url += '&search=' + kw;
+    fetch(url)
         .then(r => r.json()).then(function(d) {
             var tb = document.getElementById('executionTable');
             if (d.results && d.results.length) {
                 tb.innerHTML = d.results.map(function(e) {
-                    return '<tr><td>'+e.id+'</td><td>'+ (e.tool_name || '-') +'</td><td>'+ (e.material_serial_no || '-') +'</td><td><span class="tag" style="color:'+(statusColor[e.status]||'#909399')+'">'+ (e.status_display || e.status) +'</span></td><td>'+ (e.executor_name || '-') +'</td><td>'+ (e.started_at ? new Date(e.started_at).toLocaleString('zh-CN') : '-') +'</td><td>'+ (e.duration ? e.duration+'s' : '-') +'</td></tr>';
+                    return '<tr><td>'+e.id+'</td><td>'+ (e.tool_name || '-') +'</td><td>'+ (e.material_serial_no || '-') +'</td><td><span class="tag" style="color:'+(statusColor[e.status]||'#909399')+'">'+ (statusName[e.status] || e.status) +'</span></td><td>'+ (e.executor_name || '-') +'</td><td>'+ (e.started_at ? new Date(e.started_at).toLocaleString('zh-CN') : '-') +'</td><td>'+ (e.duration ? e.duration+'秒' : '-') +'</td></tr>';
                 }).join('');
-            } else { tb.innerHTML = '<tr><td colspan="7"><div class="empty-state"><p>No execution records</p></div></td></tr>'; }
+            } else { tb.innerHTML = '<tr><td colspan="7"><div class="empty-state"><p>暂无执行记录</p></div></td></tr>'; }
         });
 }
 function doSearch() { loadExecutions(); }

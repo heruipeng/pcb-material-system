@@ -1,65 +1,65 @@
 {% extends 'base.html' %}
-{% block title %}Materials{% endblock %}
+{% block title %}资料总纲{% endblock %}
 
 {% block content %}
 <div class="filter-card">
     <div class="filter-row">
         <div class="filter-item">
-            <label>Keyword:</label>
-            <input type="text" id="searchKeyword" placeholder="Part No / Serial No" value="{{ request.GET.keyword }}">
+            <label>关键字：</label>
+            <input type="text" id="searchKeyword" placeholder="料号 / 流水号" value="{{ request.GET.keyword }}">
         </div>
         <div class="filter-item">
-            <label>Factory:</label>
+            <label>工厂：</label>
             <select id="searchFactory">
-                <option value="">All</option>
+                <option value="">全部</option>
                 {% for f in factories %}
                 <option value="{{ f.id }}" {% if request.GET.factory == f.id|stringformat:"s" %}selected{% endif %}>{{ f.name }}</option>
                 {% endfor %}
             </select>
         </div>
         <div class="filter-item">
-            <label>Status:</label>
+            <label>状态：</label>
             <select id="searchStatus">
-                <option value="">All</option>
-                <option value="unmade">Unmade</option>
-                <option value="making">Making</option>
-                <option value="completed">Completed</option>
-                <option value="audited">Audited</option>
-                <option value="rejected">Rejected</option>
-                <option value="archived">Archived</option>
+                <option value="">全部</option>
+                <option value="unmade">未制作</option>
+                <option value="making">制作中</option>
+                <option value="completed">已完成</option>
+                <option value="audited">已审核</option>
+                <option value="rejected">已驳回</option>
+                <option value="archived">已归档</option>
             </select>
         </div>
-        <div class="filter-item"><label>From:</label><input type="date" id="searchDateFrom" value="{{ request.GET.date_from }}"></div>
-        <div class="filter-item"><label>To:</label><input type="date" id="searchDateTo" value="{{ request.GET.date_to }}"></div>
+        <div class="filter-item"><label>开始日期：</label><input type="date" id="searchDateFrom" value="{{ request.GET.date_from }}"></div>
+        <div class="filter-item"><label>结束日期：</label><input type="date" id="searchDateTo" value="{{ request.GET.date_to }}"></div>
         <div style="display:flex;align-items:flex-end;gap:8px;">
-            <button class="btn btn-primary" onclick="doSearch()">Search</button>
-            <button class="btn btn-default" onclick="doReset()">Reset</button>
+            <button class="btn btn-primary" onclick="doSearch()">查询</button>
+            <button class="btn btn-default" onclick="doReset()">重置</button>
         </div>
     </div>
 </div>
 
 <div class="status-tabs">
-    <a href="?status=" class="status-tab {% if not request.GET.status %}active{% endif %}">All <span class="count">{{ status_counts.all }}</span></a>
-    <a href="?status=unmade" class="status-tab {% if request.GET.status == 'unmade' %}active{% endif %}">Unmade <span class="count">{{ status_counts.unmade }}</span></a>
-    <a href="?status=making" class="status-tab {% if request.GET.status == 'making' %}active{% endif %}">Making <span class="count">{{ status_counts.making }}</span></a>
-    <a href="?status=completed" class="status-tab {% if request.GET.status == 'completed' %}active{% endif %}">Completed <span class="count">{{ status_counts.completed }}</span></a>
-    <a href="?status=audited" class="status-tab {% if request.GET.status == 'audited' %}active{% endif %}">Audited <span class="count">{{ status_counts.audited }}</span></a>
+    <a href="?status=" class="status-tab {% if not request.GET.status %}active{% endif %}">全部 <span class="count">{{ status_counts.all }}</span></a>
+    <a href="?status=unmade" class="status-tab {% if request.GET.status == 'unmade' %}active{% endif %}">未制作 <span class="count">{{ status_counts.unmade }}</span></a>
+    <a href="?status=making" class="status-tab {% if request.GET.status == 'making' %}active{% endif %}">制作中 <span class="count">{{ status_counts.making }}</span></a>
+    <a href="?status=completed" class="status-tab {% if request.GET.status == 'completed' %}active{% endif %}">已完成 <span class="count">{{ status_counts.completed }}</span></a>
+    <a href="?status=audited" class="status-tab {% if request.GET.status == 'audited' %}active{% endif %}">已审核 <span class="count">{{ status_counts.audited }}</span></a>
 </div>
 
 <div class="table-card">
     <table class="table">
         <thead>
             <tr>
-                <th style="width:60px;">#</th>
-                <th style="width:130px;">Serial ID</th>
-                <th style="width:100px;">Factory</th>
-                <th style="width:180px;">Part No</th>
-                <th style="width:80px;">Version</th>
-                <th style="width:200px;">Remark</th>
-                <th style="width:160px;">Created</th>
-                <th style="width:90px;">Maker</th>
-                <th style="width:110px;">Status</th>
-                <th style="width:120px;">Actions</th>
+                <th style="width:60px;">序号</th>
+                <th style="width:130px;">流水ID</th>
+                <th style="width:100px;">厂区</th>
+                <th style="width:180px;">料号</th>
+                <th style="width:80px;">版本</th>
+                <th style="width:200px;">备注</th>
+                <th style="width:160px;">创建时间</th>
+                <th style="width:90px;">制作人</th>
+                <th style="width:110px;">状态</th>
+                <th style="width:120px;">操作</th>
             </tr>
         </thead>
         <tbody>
@@ -76,26 +76,26 @@
                 <td>{{ item.maker_name|default:"-" }}</td>
                 <td><span class="tag tag-{{ item.status_display }}">{{ item.status_display }}</span></td>
                 <td>
-                    <a href="/materials/{{ item.id }}/" class="link-btn">Detail</a>
-                    <a href="javascript:void(0)" class="link-btn" onclick="generateDoc({{ item.id }})">Generate</a>
+                    <a href="/materials/{{ item.id }}/" class="link-btn">详情</a>
+                    <a href="javascript:void(0)" class="link-btn" onclick="generateDoc({{ item.id }})">生成</a>
                 </td>
             </tr>
             {% endfor %}
             {% else %}
-            <tr><td colspan="10"><div class="empty-state"><p>No materials found</p></div></td></tr>
+            <tr><td colspan="10"><div class="empty-state"><p>暂无资料</p></div></td></tr>
             {% endif %}
         </tbody>
     </table>
     {% if page_obj %}
     <div class="pagination-bar">
-        <div>Total <strong>{{ page_obj.paginator.count }}</strong></div>
+        <div>共 <strong>{{ page_obj.paginator.count }}</strong> 条</div>
         <div class="pagination">
             {% if page_obj.has_previous %}
-            <a class="page-btn" href="?page={{ page_obj.previous_page_number }}&status={{ request.GET.status|default:'' }}&keyword={{ request.GET.keyword|default:'' }}&factory={{ request.GET.factory|default:'' }}">&lt;</a>
+            <a class="page-btn" href="?page={{ page_obj.previous_page_number }}&status={{ request.GET.status|default:'' }}&keyword={{ request.GET.keyword|default:'' }}&factory={{ request.GET.factory|default:'' }}">上一页</a>
             {% endif %}
-            <span class="page-btn active">{{ page_obj.number }}</span>
+            <span class="page-btn active">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
             {% if page_obj.has_next %}
-            <a class="page-btn" href="?page={{ page_obj.next_page_number }}&status={{ request.GET.status|default:'' }}&keyword={{ request.GET.keyword|default:'' }}&factory={{ request.GET.factory|default:'' }}">&gt;</a>
+            <a class="page-btn" href="?page={{ page_obj.next_page_number }}&status={{ request.GET.status|default:'' }}&keyword={{ request.GET.keyword|default:'' }}&factory={{ request.GET.factory|default:'' }}">下一页</a>
             {% endif %}
         </div>
     </div>
@@ -119,13 +119,13 @@ function doSearch() {
 }
 function doReset() { window.location.href = '?'; }
 function generateDoc(id) {
-    if (!confirm('Trigger generation for material #' + id + '?')) return;
+    if (!confirm('确定要生成资料吗？')) return;
     fetch('/api/materials/' + id + '/generate/', {
         method: 'POST',
         headers: {'Content-Type':'application/json','X-CSRFToken':getCsrf()}
     }).then(r => r.json()).then(d => {
-        if (d.success) { alert('Job created! Execution ID: ' + d.execution_id); }
-        else { alert('Failed: ' + (d.error || 'unknown')); }
+        if (d.success) { alert('生成成功！任务ID：' + d.execution_id); }
+        else { alert('生成失败：' + (d.error || '未知错误')); }
     });
 }
 function getCsrf() { var m = document.cookie.match(/csrftoken=([^;]+)/); return m ? m[1] : ''; }

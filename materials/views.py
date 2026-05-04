@@ -137,15 +137,27 @@ def report_detail_page(request, id):
 @login_required(login_url='/login/')
 def tool_list_page(request):
     """工具输出页面"""
-    from tools.models import ToolExecution
-    tools = [
-        {'name': '飞针测试', 'type': 'fly_probe', 'icon': 'fas fa-bolt', 'color': '#409EFF', 'desc': '飞针测试资料生成', 'count': ToolExecution.objects.filter(tool__tool_type='fly_probe').count()},
-        {'name': '阻抗测试', 'type': 'impedance', 'icon': 'fas fa-wave-square', 'color': '#67C23A', 'desc': '阻抗测试资料生成', 'count': ToolExecution.objects.filter(tool__tool_type='impedance').count()},
-        {'name': 'AOI检测', 'type': 'aoi', 'icon': 'fas fa-eye', 'color': '#409EFF', 'desc': 'AOI检测资料生成', 'count': ToolExecution.objects.filter(tool__tool_type='aoi').count()},
-        {'name': 'X-Ray检测', 'type': 'xray', 'icon': 'fas fa-x-ray', 'color': '#E6A23C', 'desc': 'X-Ray检测资料生成', 'count': ToolExecution.objects.filter(tool__tool_type='xray').count()},
-        {'name': 'ICT测试', 'type': 'ict', 'icon': 'fas fa-microchip', 'color': '#F56C6C', 'desc': 'ICT测试资料生成', 'count': ToolExecution.objects.filter(tool__tool_type='ict').count()},
-        {'name': '功能测试', 'type': 'functional', 'icon': 'fas fa-cogs', 'color': '#909399', 'desc': '功能测试资料生成', 'count': ToolExecution.objects.filter(tool__tool_type='functional').count()},
-    ]
+    from tools.models import Tool, ToolExecution
+    from django.db.models import Count
+    TYPE_ICONS = {
+        'fly_probe': 'fa-bolt', 'impedance': 'fa-wave-square', 'aoi': 'fa-eye',
+        'xray': 'fa-x-ray', 'ict': 'fa-microchip', 'functional': 'fa-cogs',
+    }
+    TYPE_COLORS = {
+        'fly_probe': '#409EFF', 'impedance': '#67C23A', 'aoi': '#409EFF',
+        'xray': '#E6A23C', 'ict': '#F56C6C', 'functional': '#909399',
+    }
+    tools = []
+    for t in Tool.objects.filter(is_active=True):
+        tools.append({
+            'id': t.id,
+            'name': t.name,
+            'type': t.tool_type,
+            'icon': 'fas ' + TYPE_ICONS.get(t.tool_type, 'fa-tools'),
+            'color': TYPE_COLORS.get(t.tool_type, '#909399'),
+            'desc': t.description or '',
+            'count': ToolExecution.objects.filter(tool=t).count(),
+        })
     return render(request, 'tools/tool_list.html', {'tools': tools})
 
 
