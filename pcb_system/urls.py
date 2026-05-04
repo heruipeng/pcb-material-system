@@ -8,7 +8,6 @@ from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
 from materials.views import material_list_page, dashboard_page, tool_list_page, report_list_page, material_detail_page, tool_detail_page, report_detail_page
 from core.views import manage_users, system_settings, CustomLoginView
-from django.contrib.auth import views as auth_views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
