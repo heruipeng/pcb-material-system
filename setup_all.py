@@ -86,11 +86,12 @@ import os, sys, django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'pcb_system.settings')
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 django.setup()
+from django.utils import timezone
 from accounts.models import User, Permission, RolePermission
 from core.models import Factory, SystemConfig
 from materials.models import MaterialCategory, Material
 from reports.models import ReportCategory, Report
-from tools.models import ToolCategory, Tool
+from tools.models import ToolCategory, Tool, ToolExecution
 
 print('='*60)
 for f_data in [{'code':'SZ01','name':'深圳一厂','address':'深圳市宝安区XX路100号','contact':'张工'},{'code':'SZ02','name':'深圳二厂','address':'深圳市龙岗区XX路200号','contact':'李工'},{'code':'DG01','name':'东莞厂','address':'东莞市长安镇XX路88号','contact':'王工'}]:
@@ -140,9 +141,30 @@ for td in [
 rcat={}
 for rc in [('QUALITY','质量报表'),('PRODUCTION','生产报表'),('YIELD','良率报表'),('COST','成本报表')]:
     obj,_=ReportCategory.objects.get_or_create(code=rc[0],defaults={'name':rc[1],'sort_order':1}); rcat[rc[0]]=obj
+
+# Generate tool execution records
+tools_list = list(Tool.objects.filter(is_active=True))
+materials_list = list(Material.objects.all()[:200])
+executors = [admin, zhangsan]
+import random, datetime
+for mt in materials_list[:150]:
+    tool = random.choice(tools_list)
+    st = random.choice(['pending','running','completed','completed','completed','failed'])
+    dur = random.randint(10, 3600) if st in ('completed','failed') else None
+    ToolExecution.objects.get_or_create(
+        tool=tool, material=mt, status=st,
+        defaults={
+            'executor': random.choice(executors),
+            'started_at': timezone.now() - datetime.timedelta(minutes=random.randint(5, 10080)),
+            'completed_at': timezone.now() - datetime.timedelta(minutes=random.randint(1, 10000)) if st in ('completed','failed') else None,
+            'duration': dur,
+            'params': {'mode': random.choice(['auto','manual']), 'layer': random.randint(1,16)},
+        }
+    )
+
 for rd in [('RPT_Q001','每日质量巡检','summary','QUALITY'),('RPT_Q002','来料检验明细','detail','QUALITY'),('RPT_P001','每日产量汇总','summary','PRODUCTION'),('RPT_P002','工序效率分析','analysis','PRODUCTION'),('RPT_Y001','综合良率统计','statistical','YIELD'),('RPT_C001','物料成本核算','analysis','COST')]:
     Report.objects.get_or_create(code=rd[0],defaults={'name':rd[1],'category':rcat[rd[3]],'report_type':rd[2],'description':rd[1]})
-print('[OK] Materials x20 + Tools x6 + Reports x6')
+print('[OK] Materials x1000 + Tools x6 + Executions x150 + Reports x6')
 perms={'material.view':'View','material.create':'Create','material.edit':'Edit','material.delete':'Delete','material.approve':'Approve','material.export':'Export','report.view':'View Reports','report.create':'Create Reports','report.export':'Export Reports','tool.view':'View Tools','tool.execute':'Execute','tool.config':'Configure','user.manage':'User Mgmt','system.config':'Config'}
 pobj={}
 for c,n in perms.items(): obj,_=Permission.objects.get_or_create(code=c,defaults={'name':n}); pobj[c]=obj
