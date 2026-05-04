@@ -2,7 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
     FactoryViewSet, SystemConfigViewSet, OperationLogViewSet,
-    NotificationViewSet, FileStorageViewSet, dashboard_stats, system_info
+    NotificationViewSet, FileStorageViewSet, dashboard_stats, system_info, api_root
 )
 
 router = DefaultRouter()
@@ -16,4 +16,5 @@ urlpatterns = [
     path('', include(router.urls)),
     path('dashboard-stats/', dashboard_stats, name='dashboard-stats'),
     path('system-info/', system_info, name='system-info'),
+    path('', api_root, name='api-root'),
 ]

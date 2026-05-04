@@ -176,19 +176,20 @@ class MaterialCategoryViewSet(viewsets.ModelViewSet):
     """资料分类管理"""
     queryset = MaterialCategory.objects.filter(is_active=True)
     serializer_class = MaterialCategorySerializer
-    
-    def get_permissions(self):
-        from rest_framework.permissions import IsAuthenticated
-        return [IsAuthenticated()]
+    filter_backends = [SearchFilter, OrderingFilter]
+    search_fields = ['name', 'code']
+    ordering_fields = ['sort_order', 'id']
+    ordering = ['sort_order', 'id']
 
 
 class MaterialViewSet(viewsets.ModelViewSet):
-    """工程资料管理"""
+    """工程资料管理 - 完整 CRUD + 审批/生成/统计"""
     queryset = Material.objects.all()
+    serializer_class = MaterialSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ['status', 'factory', 'category', 'creator']
-    search_fields = ['serial_no', 'material_no', 'remark']
-    ordering_fields = ['created_at', 'updated_at', 'serial_no']
+    filterset_fields = ['status', 'factory', 'category', 'creator', 'process_type']
+    search_fields = ['serial_no', 'material_no', 'remark', 'version_code']
+    ordering_fields = ['created_at', 'updated_at', 'serial_no', 'status', 'id']
     ordering = ['-created_at']
     
     def get_serializer_class(self):
@@ -197,7 +198,7 @@ class MaterialViewSet(viewsets.ModelViewSet):
         return MaterialSerializer
     
     def get_queryset(self):
-        queryset = Material.objects.all()
+        queryset = Material.objects.select_related('factory', 'maker', 'creator', 'category').all()
         
         # 权限过滤
         user = self.request.user
@@ -370,8 +371,13 @@ class MaterialViewSet(viewsets.ModelViewSet):
 
 class MaterialAttachmentViewSet(viewsets.ModelViewSet):
     """资料附件管理"""
-    queryset = MaterialAttachment.objects.all()
+    queryset = MaterialAttachment.objects.select_related('uploaded_by').all()
     serializer_class = MaterialAttachmentSerializer
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = ['material']
+    search_fields = ['file_name', 'description']
+    ordering_fields = ['uploaded_at', 'file_size']
+    ordering = ['-uploaded_at']
     
     def get_queryset(self):
         material_id = self.request.query_params.get('material')

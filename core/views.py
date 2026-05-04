@@ -1,12 +1,14 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.utils import timezone
 from rest_framework import viewsets, status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.filters import SearchFilter, OrderingFilter
 from django.db.models import Count
-from django.utils import timezone
 from datetime import datetime, timedelta
 
 from .models import Factory, SystemConfig, OperationLog, Notification, FileStorage
@@ -17,97 +19,87 @@ from .serializers import (
 
 
 class FactoryViewSet(viewsets.ModelViewSet):
-    """工厂管理"""
+    """工厂管理 - 完整 CRUD"""
     queryset = Factory.objects.filter(is_active=True)
     serializer_class = FactorySerializer
-    permission_classes = [IsAuthenticated]
+    filter_backends = [SearchFilter, OrderingFilter]
+    search_fields = ['name', 'code', 'address', 'contact']
+    ordering_fields = ['created_at', 'id', 'name']
+    ordering = ['-created_at']
 
 
 class SystemConfigViewSet(viewsets.ModelViewSet):
-    """系统配置"""
+    """系统配置管理"""
     queryset = SystemConfig.objects.all()
     serializer_class = SystemConfigSerializer
-    permission_classes = [IsAuthenticated]
-    
+    filter_backends = [SearchFilter, OrderingFilter]
+    search_fields = ['key', 'value', 'description']
+    ordering_fields = ['key', 'updated_at']
+
     @action(detail=False, methods=['get'])
     def get_value(self, request):
-        """获取配置值"""
+        """获取单个配置值"""
         key = request.query_params.get('key')
         if not key:
-            return Response({'error': '请提供配置键'}, status=status.HTTP_400_BAD_REQUEST)
-        
+            return Response({'error': '请提供 key 参数'}, status=400)
         try:
             config = SystemConfig.objects.get(key=key)
-            return Response({'key': key, 'value': config.value})
+            return Response({'key': key, 'value': config.value, 'description': config.description})
         except SystemConfig.DoesNotExist:
-            return Response({'error': '配置不存在'}, status=status.HTTP_404_NOT_FOUND)
-    
+            return Response({'key': key, 'value': None, 'message': '配置不存在'})
+
     @action(detail=False, methods=['post'])
     def set_value(self, request):
-        """设置配置值"""
-        key = request.data.get('key')
-        value = request.data.get('value')
-        
-        if not key or value is None:
-            return Response({'error': '请提供配置键和值'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        config, created = SystemConfig.objects.update_or_create(
-            key=key,
-            defaults={'value': value}
-        )
-        
-        return Response({
-            'success': True,
-            'key': key,
-            'value': value,
-            'created': created
-        })
+        """批量设置配置值"""
+        configs = request.data.get('configs', {})
+        if not configs:
+            return Response({'error': '请提供 configs'}, status=400)
+        updated = []
+        for key, value in configs.items():
+            config, created = SystemConfig.objects.update_or_create(key=key, defaults={'value': str(value)})
+            updated.append({'key': key, 'value': value, 'created': created})
+        return Response({'success': True, 'updated': updated})
 
 
 class OperationLogViewSet(viewsets.ReadOnlyModelViewSet):
-    """操作日志"""
-    queryset = OperationLog.objects.all()
+    """操作日志 - 只读"""
+    queryset = OperationLog.objects.select_related('user').all()
     serializer_class = OperationLogSerializer
-    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['action', 'module', 'user']
-    ordering_fields = ['created_at']
+    search_fields = ['remark', 'object_type']
+    ordering_fields = ['created_at', 'id']
     ordering = ['-created_at']
-    
-    def get_queryset(self):
-        user = self.request.user
-        if user.role == 'admin':
-            return OperationLog.objects.all()
-        return OperationLog.objects.filter(user=user)
 
 
 class NotificationViewSet(viewsets.ModelViewSet):
     """通知管理"""
-    queryset = Notification.objects.all()
     serializer_class = NotificationSerializer
-    permission_classes = [IsAuthenticated]
-    
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filterset_fields = ['is_read', 'user']
+    ordering_fields = ['created_at']
+    ordering = ['-created_at']
+
     def get_queryset(self):
-        return Notification.objects.filter(user=self.request.user)
-    
+        if self.request.user.is_authenticated:
+            return Notification.objects.filter(user=self.request.user)
+        return Notification.objects.none()
+
     @action(detail=False, methods=['get'])
     def unread(self, request):
-        """获取未读通知"""
-        notifications = self.get_queryset().filter(is_read=False)
-        serializer = self.get_serializer(notifications, many=True)
-        return Response(serializer.data)
-    
+        """未读通知"""
+        qs = self.get_queryset().filter(is_read=False)
+        return Response(NotificationSerializer(qs, many=True).data)
+
     @action(detail=False, methods=['post'])
     def mark_all_read(self, request):
-        """标记所有通知为已读"""
-        self.get_queryset().filter(is_read=False).update(
-            is_read=True,
-            read_at=timezone.now()
-        )
+        """全部标为已读"""
+        self.get_queryset().filter(is_read=False).update(is_read=True, read_at=timezone.now())
         return Response({'success': True})
-    
+
     @action(detail=True, methods=['post'])
     def mark_read(self, request, pk=None):
-        """标记通知为已读"""
+        """标记单条已读"""
         notification = self.get_object()
         notification.is_read = True
         notification.read_at = timezone.now()
@@ -119,24 +111,28 @@ class FileStorageViewSet(viewsets.ModelViewSet):
     """文件存储管理"""
     queryset = FileStorage.objects.all()
     serializer_class = FileStorageSerializer
-    permission_classes = [IsAuthenticated]
-    
-    def perform_create(self, serializer):
-        serializer.save(uploaded_by=self.request.user)
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = ['file_type']
+    search_fields = ['file_name', 'description']
+    ordering_fields = ['created_at', 'file_size']
 
+    def perform_create(self, serializer):
+        serializer.save(uploaded_by=self.request.user if self.request.user.is_authenticated else None)
+
+
+# ===== 统计与系统信息 API =====
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
 def dashboard_stats(request):
-    """仪表盘统计数据"""
+    """首页仪表盘统计数据"""
     from materials.models import Material
     from tools.models import ToolExecution
     from reports.models import ReportInstance
-    
+
     today = timezone.now().date()
     week_start = today - timedelta(days=today.weekday())
     month_start = today.replace(day=1)
-    
+
     # 资料统计
     material_stats = {
         'total': Material.objects.count(),
@@ -148,55 +144,161 @@ def dashboard_stats(request):
         'completed': Material.objects.filter(status='completed').count(),
         'audited': Material.objects.filter(status='audited').count(),
     }
-    
+
     # 工具执行统计
     tool_stats = {
         'total': ToolExecution.objects.count(),
         'today': ToolExecution.objects.filter(created_at__date=today).count(),
         'week': ToolExecution.objects.filter(created_at__date__gte=week_start).count(),
-        'success': ToolExecution.objects.filter(status='completed').count(),
+        'completed': ToolExecution.objects.filter(status='completed').count(),
         'failed': ToolExecution.objects.filter(status='failed').count(),
+        'running': ToolExecution.objects.filter(status='running').count(),
+        'pending': ToolExecution.objects.filter(status='pending').count(),
     }
-    
+
     # 报表统计
     report_stats = {
         'total': ReportInstance.objects.count(),
         'today': ReportInstance.objects.filter(generated_at__date=today).count(),
         'week': ReportInstance.objects.filter(generated_at__date__gte=week_start).count(),
     }
-    
-    # 按状态统计资料
-    status_stats = Material.objects.values('status').annotate(
-        count=Count('id')
-    ).order_by('status')
-    
+
+    # 按状态统计
+    status_stats = list(Material.objects.values('status').annotate(count=Count('id')).order_by('status'))
+
     return Response({
         'material_stats': material_stats,
         'tool_stats': tool_stats,
         'report_stats': report_stats,
-        'status_stats': list(status_stats),
+        'status_stats': status_stats,
     })
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
 def system_info(request):
     """系统信息"""
-    import django
-    import sys
-    
+    import django, sys, platform
+
     return Response({
         'django_version': django.get_version(),
-        'python_version': sys.version,
+        'python_version': sys.version.split()[0],
+        'os': platform.platform(),
         'timezone': str(timezone.get_current_timezone()),
     })
 
 
-# ===== 用户管理页面 =====
+@api_view(['GET'])
+def api_root(request):
+    """API 接口总览"""
+    return Response({
+        'name': '工程资料管理系统 V2.0 API',
+        'version': '2.0',
+        'endpoints': {
+            # 认证
+            'auth': {
+                'login': 'POST /api/auth/users/login/',
+                'logout': 'POST /api/auth/users/logout/',
+                'me': 'GET /api/auth/users/me/',
+                'change_password': 'POST /api/auth/users/change_password/',
+                'permissions': 'GET /api/auth/users/permissions/',
+                'users': 'GET/POST /api/auth/users/',
+            },
+            # 资料
+            'materials': {
+                'material_list': 'GET/POST /api/materials/',
+                'material_detail': 'GET/PUT/PATCH/DELETE /api/materials/{id}/',
+                'material_generate': 'POST /api/materials/{id}/generate/',
+                'material_approve': 'POST /api/materials/{id}/approve/',
+                'material_reject': 'POST /api/materials/{id}/reject/',
+                'material_publish': 'POST /api/materials/{id}/publish/',
+                'material_history': 'GET /api/materials/{id}/history/',
+                'material_statistics': 'GET /api/materials/statistics/',
+                'categories': 'GET/POST /api/materials/categories/',
+                'attachments': 'GET/POST /api/materials/attachments/',
+            },
+            # 工具
+            'tools': {
+                'tool_list': 'GET/POST /api/tools/',
+                'tool_detail': 'GET/PUT/PATCH/DELETE /api/tools/{id}/',
+                'tool_execute': 'POST /api/tools/{id}/execute/',
+                'tool_templates': 'GET /api/tools/{id}/templates/',
+                'executions': 'GET /api/tools/executions/',
+                'execution_cancel': 'POST /api/tools/executions/{id}/cancel/',
+                'execution_outputs': 'GET /api/tools/executions/{id}/outputs/',
+                'categories': 'GET/POST /api/tools/categories/',
+                'templates': 'GET/POST /api/tools/templates/',
+                'outputs': 'GET /api/tools/outputs/',
+            },
+            # 报表
+            'reports': {
+                'report_list': 'GET/POST /api/reports/',
+                'report_detail': 'GET/PUT/PATCH/DELETE /api/reports/{id}/',
+                'report_generate': 'POST /api/reports/{id}/generate/',
+                'report_statistics': 'GET /api/reports/statistics/',
+                'instances': 'GET /api/reports/instances/',
+                'categories': 'GET/POST /api/reports/categories/',
+                'dashboards': 'GET/POST /api/reports/dashboards/',
+                'scheduled': 'GET/POST /api/reports/scheduled/',
+            },
+            # 核心
+            'core': {
+                'factories': 'GET/POST /api/core/factories/',
+                'configs': 'GET/POST /api/core/configs/',
+                'config_get': 'GET /api/core/configs/get_value/?key=site_name',
+                'config_set': 'POST /api/core/configs/set_value/',
+                'logs': 'GET /api/core/logs/',
+                'notifications': 'GET/POST /api/core/notifications/',
+                'files': 'GET/POST /api/core/files/',
+                'dashboard_stats': 'GET /api/core/dashboard-stats/',
+                'system_info': 'GET /api/core/system-info/',
+            },
+        },
+        'filter_params': {
+            'materials': '?status=completed&process_type=fly_probe&factory=1&search=keyword&ordering=-created_at',
+            'tools': '?tool_type=fly_probe&category=1&search=keyword&ordering=name',
+            'executions': '?status=failed&tool__tool_type=fly_probe&search=serial&ordering=-duration',
+            'reports': '?report_type=summary&search=keyword&ordering=name',
+            'logs': '?action=create&module=materials&ordering=-created_at',
+        },
+    })
+ENDPROXY
+
+# ===== 自定义登录视图 =====
+from django.contrib.auth import authenticate, login as auth_login
+from django.contrib.auth.views import LoginView
+User = __import__('django.contrib.auth').get_user_model()
+
+
+class CustomLoginView(LoginView):
+    """自定义登录视图 - 区分停用和密码错误"""
+    template_name = 'login.html'
+
+    def form_invalid(self, form):
+        username = form.data.get('username', '')
+        if username:
+            try:
+                user = User.objects.get(username=username)
+                if not user.is_active:
+                    form._errors.clear()
+                    form.add_error(None, '该账号已被停用，请联系管理员')
+                    return self.render_to_response(self.get_context_data(form=form))
+                elif not user.check_password(form.data.get('password', '')):
+                    form._errors.clear()
+                    form.add_error(None, '密码错误，请重新输入')
+                    return self.render_to_response(self.get_context_data(form=form))
+            except User.DoesNotExist:
+                form._errors.clear()
+                form.add_error(None, '用户名不存在')
+                return self.render_to_response(self.get_context_data(form=form))
+        form._errors.clear()
+        form.add_error(None, '用户名或密码错误')
+        return self.render_to_response(self.get_context_data(form=form))
+
+
 @login_required(login_url='/login/')
 def manage_users(request):
-    """用户管理 - V2.0 风格页面"""
-    from accounts.models import User, Permission, RolePermission
+    """用户管理页面"""
+    from accounts.models import User as AUser, Permission, RolePermission
     from core.models import Factory
 
     factories = Factory.objects.filter(is_active=True)
@@ -211,10 +313,10 @@ def manage_users(request):
             factory_id = request.POST.get('factory', '') or None
             is_staff = request.POST.get('is_staff') == 'on'
 
-            if User.objects.filter(username=username).exists():
+            if AUser.objects.filter(username=username).exists():
                 messages.error(request, f'用户名 {username} 已存在')
             else:
-                user = User.objects.create(
+                user = AUser.objects.create(
                     username=username, role=role,
                     department=department, factory_id=factory_id,
                     is_staff=is_staff
@@ -225,7 +327,7 @@ def manage_users(request):
 
         elif action == 'edit':
             user_id = request.POST.get('user_id')
-            user = get_object_or_404(User, pk=user_id)
+            user = get_object_or_404(AUser, pk=user_id)
             user.role = request.POST.get('role', user.role)
             user.department = request.POST.get('department', user.department)
             user.factory_id = request.POST.get('factory') or None
@@ -239,7 +341,7 @@ def manage_users(request):
 
         elif action == 'delete':
             user_id = request.POST.get('user_id')
-            user = get_object_or_404(User, pk=user_id)
+            user = get_object_or_404(AUser, pk=user_id)
             if user.username == 'admin':
                 messages.error(request, '不能删除超级管理员')
             else:
@@ -249,7 +351,7 @@ def manage_users(request):
 
         elif action == 'toggle_active':
             user_id = request.POST.get('user_id')
-            user = get_object_or_404(User, pk=user_id)
+            user = get_object_or_404(AUser, pk=user_id)
             user.is_active = not user.is_active
             user.save()
             st = '启用' if user.is_active else '停用'
@@ -257,20 +359,18 @@ def manage_users(request):
 
         return redirect('manage-users')
 
-    users = User.objects.select_related('factory').all().order_by('-created_at')
+    users = AUser.objects.select_related('factory').all().order_by('-created_at')
     return render(request, 'core/manage_users.html', {
         'users': users,
         'factories': factories,
-        'role_choices': User.ROLE_CHOICES,
+        'role_choices': AUser.ROLE_CHOICES,
     })
 
 
-# ===== 系统设置页面 =====
 @login_required(login_url='/login/')
 def system_settings(request):
-    """系统设置 - V2.0 风格页面"""
-    from core.models import SystemConfig, OperationLog
-    from django.db.models import Count
+    """系统设置页面"""
+    from core.models import SystemConfig as SConfig, OperationLog as OLog
 
     if request.method == 'POST':
         action = request.POST.get('action', '')
@@ -278,29 +378,21 @@ def system_settings(request):
             key = request.POST.get('key', '').strip()
             value = request.POST.get('value', '')
             desc = request.POST.get('description', '')
-            SystemConfig.objects.update_or_create(
-                key=key,
-                defaults={'value': value, 'description': desc}
-            )
+            SConfig.objects.update_or_create(key=key, defaults={'value': value, 'description': desc})
             messages.success(request, f'配置 {key} 已保存')
         elif action == 'delete_config':
             key = request.POST.get('key', '')
-            SystemConfig.objects.filter(key=key).delete()
+            SConfig.objects.filter(key=key).delete()
             messages.success(request, f'配置 {key} 已删除')
-
         return redirect('system-settings')
 
-    configs = SystemConfig.objects.all().order_by('key')
+    configs = SConfig.objects.all().order_by('key')
+    logs = OLog.objects.select_related('user').all().order_by('-created_at')[:50]
 
-    # 最近 50 条操作日志
-    logs = OperationLog.objects.select_related('user').all().order_by('-created_at')[:50]
-
-    # 日志统计
     today = timezone.now().date()
     log_stats = {
-        'total': OperationLog.objects.count(),
-        'today': OperationLog.objects.filter(created_at__date=today).count(),
-        'by_module': list(OperationLog.objects.values('module').annotate(c=Count('id')).order_by('-c')[:10]),
+        'total': OLog.objects.count(),
+        'today': OLog.objects.filter(created_at__date=today).count(),
     }
 
     import django, sys, platform
@@ -317,42 +409,3 @@ def system_settings(request):
         'log_stats': log_stats,
         'system_info': system_info,
     })
-
-
-# ===== 自定义登录视图 =====
-from django.contrib.auth import authenticate, login
-from django.contrib.auth.views import LoginView
-from django.contrib.auth.forms import AuthenticationForm
-
-
-class CustomLoginView(LoginView):
-    """自定义登录视图 - 区分密码错误和账号停用"""
-    template_name = 'login.html'
-
-    def form_invalid(self, form):
-        """重写错误处理，区分停用和密码错误"""
-        username = form.data.get('username', '')
-        if username:
-            from accounts.models import User
-            try:
-                user = User.objects.get(username=username)
-                if not user.is_active:
-                    # 清掉默认错误，显示停用提示
-                    form._errors.clear()
-                    form.add_error(None, '该账号已被停用，请联系管理员')
-                    return self.render_to_response(self.get_context_data(form=form))
-                elif not user.check_password(form.data.get('password', '')):
-                    form._errors.clear()
-                    form.add_error(None, '密码错误，请重新输入')
-                    return self.render_to_response(self.get_context_data(form=form))
-                else:
-                    form._errors.clear()
-                    form.add_error(None, '登录失败，请重试')
-                    return self.render_to_response(self.get_context_data(form=form))
-            except User.DoesNotExist:
-                form._errors.clear()
-                form.add_error(None, '用户名不存在')
-                return self.render_to_response(self.get_context_data(form=form))
-        form._errors.clear()
-        form.add_error(None, '用户名或密码错误')
-        return self.render_to_response(self.get_context_data(form=form))

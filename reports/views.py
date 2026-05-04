@@ -5,15 +5,12 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django.utils import timezone
 from datetime import datetime, timedelta
-import pandas as pd
-from io import BytesIO
 
 from .models import Report, ReportCategory, ReportInstance, Dashboard, ScheduledReport
 from .serializers import (
     ReportSerializer, ReportCategorySerializer, ReportInstanceSerializer,
     DashboardSerializer, ScheduledReportSerializer
 )
-from accounts.permissions import PERM_REPORT_VIEW, PERM_REPORT_EXPORT, PERM_REPORT_CREATE
 from core.utils import log_operation
 
 
@@ -21,54 +18,41 @@ class ReportCategoryViewSet(viewsets.ModelViewSet):
     """报表分类管理"""
     queryset = ReportCategory.objects.filter(is_active=True)
     serializer_class = ReportCategorySerializer
-    
-    def get_permissions(self):
-        from rest_framework.permissions import IsAuthenticated
-        return [IsAuthenticated()]
+    filter_backends = [SearchFilter, OrderingFilter]
+    search_fields = ['name', 'code']
+    ordering_fields = ['sort_order', 'id']
+    ordering = ['sort_order', 'id']
 
 
 class ReportViewSet(viewsets.ModelViewSet):
-    """报表管理"""
-    queryset = Report.objects.filter(is_active=True)
+    """报表管理 - 完整 CRUD + 生成 Excel"""
+    queryset = Report.objects.select_related('category', 'created_by').filter(is_active=True)
     serializer_class = ReportSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ['report_type', 'category']
+    filterset_fields = ['report_type', 'category', 'is_system']
     search_fields = ['name', 'code', 'description']
-    ordering_fields = ['created_at', 'name']
-    ordering = ['-created_at']
-    
-    def get_permissions(self):
-        from rest_framework.permissions import IsAuthenticated
-        return [IsAuthenticated()]
-    
-    def get_queryset(self):
-        user = self.request.user
-        if user.role == 'admin':
-            return Report.objects.all()
-        return Report.objects.filter(is_active=True)
-    
+    ordering_fields = ['created_at', 'updated_at', 'name', 'sort_order']
+    ordering = ['sort_order', 'id']
+
     @action(detail=True, methods=['post'])
     def generate(self, request, pk=None):
-        """生成报表 - 直接生成Excel文件"""
+        """生成报表 - 直接生成 Excel 文件并返回下载地址"""
         import os, random
         from django.conf import settings
         from openpyxl import Workbook
-        
+
         report = self.get_object()
-        
-        # 生成Excel文件
+
+        # 生成 Excel 文件
         wb = Workbook()
         ws = wb.active
         ws.title = report.name
-        
-        # 表头
         headers = ['序号', '料号', '流水号', '工厂', '状态', '数量', '备注']
         for col, h in enumerate(headers, 1):
             ws.cell(row=1, column=col, value=h)
-        
-        # 数据行
+
         from materials.models import Material
-        materials = Material.objects.all()[:50]
+        materials = Material.objects.select_related('factory').all()[:50]
         row_count = len(materials)
         for i, m in enumerate(materials):
             ws.cell(row=i+2, column=1, value=i+1)
@@ -78,21 +62,21 @@ class ReportViewSet(viewsets.ModelViewSet):
             ws.cell(row=i+2, column=5, value=m.get_status_display())
             ws.cell(row=i+2, column=6, value=random.randint(100, 9999))
             ws.cell(row=i+2, column=7, value=m.remark or '')
-        
-        # 保存文件
+
+        # 保存到 media 目录
         media_root = settings.MEDIA_ROOT
         report_dir = os.path.join(media_root, 'reports')
         os.makedirs(report_dir, exist_ok=True)
         filename = f"{report.code}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
         filepath = os.path.join(report_dir, filename)
         wb.save(filepath)
-        
+
         # 创建报表实例
         instance = ReportInstance.objects.create(
             report=report,
             name=f"{report.name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
             status='completed',
-            generated_by=request.user,
+            generated_by=request.user if request.user.is_authenticated else None,
             row_count=row_count,
             file=f'reports/{filename}',
             file_format='xlsx',
@@ -100,129 +84,73 @@ class ReportViewSet(viewsets.ModelViewSet):
             generated_at=datetime.now(),
             completed_at=datetime.now(),
         )
-        
+
         log_operation(request, 'create', 'reports', 'ReportInstance', instance.id,
                      f'生成报表 {report.name}')
-        
+
         return Response({
             'success': True,
             'instance_id': instance.id,
             'status': 'completed',
             'row_count': row_count,
             'file_url': instance.file.url if instance.file else None,
+            'file_name': filename,
         })
-    
+
     @action(detail=False, methods=['get'])
     def statistics(self, request):
         """报表统计"""
-        from django.db.models import Count
-        
-        # 按类型统计
-        type_stats = Report.objects.values('report_type').annotate(
-            count=Count('id')
-        ).order_by('report_type')
-        
-        # 生成次数统计
-        today = datetime.now().date()
+        today = timezone.now().date()
         week_start = today - timedelta(days=today.weekday())
-        month_start = today.replace(day=1)
-        
-        today_count = ReportInstance.objects.filter(generated_at__date=today).count()
-        week_count = ReportInstance.objects.filter(generated_at__date__gte=week_start).count()
-        month_count = ReportInstance.objects.filter(generated_at__date__gte=month_start).count()
-        
+
         return Response({
-            'type_stats': list(type_stats),
-            'today_count': today_count,
-            'week_count': week_count,
-            'month_count': month_count,
-            'total_count': ReportInstance.objects.count(),
+            'total_count': Report.objects.count(),
+            'active_count': Report.objects.filter(is_active=True).count(),
+            'today_count': ReportInstance.objects.filter(generated_at__date=today).count(),
+            'week_count': ReportInstance.objects.filter(generated_at__date__gte=week_start).count(),
+            'by_type': list(Report.objects.values('report_type').annotate(c=models.Count('id'))),
         })
+
+    @action(detail=True, methods=['get'])
+    def download(self, request, pk=None):
+        """下载报表最新文件"""
+        report = self.get_object()
+        instance = report.instances.filter(status='completed').order_by('-generated_at').first()
+        if instance and instance.file:
+            return Response({'file_url': instance.file.url, 'file_name': instance.file.name})
+        return Response({'error': '没有可下载的文件'}, status=404)
+
+
+import django.db.models as models  # for Count in statistics
 
 
 class ReportInstanceViewSet(viewsets.ReadOnlyModelViewSet):
-    """报表实例管理"""
-    queryset = ReportInstance.objects.all()
+    """报表实例 - 只读"""
+    queryset = ReportInstance.objects.select_related('report', 'generated_by').all()
     serializer_class = ReportInstanceSerializer
-    filter_backends = [DjangoFilterBackend, OrderingFilter]
-    filterset_fields = ['report', 'status', 'generated_by']
-    ordering_fields = ['generated_at']
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = ['report', 'status']
+    search_fields = ['name']
+    ordering_fields = ['generated_at', 'row_count', 'file_size']
     ordering = ['-generated_at']
-    
-    def get_permissions(self):
-        from rest_framework.permissions import IsAuthenticated
-        return [IsAuthenticated()]
-    
-    @action(detail=True, methods=['get'])
-    def download(self, request, pk=None):
-        """下载报表"""
-        if not request.user.has_permission(PERM_REPORT_EXPORT):
-            return Response({'error': '没有导出权限'}, status=status.HTTP_403_FORBIDDEN)
-        
-        instance = self.get_object()
-        
-        if not instance.file:
-            return Response({'error': '报表文件不存在'}, status=status.HTTP_404_NOT_FOUND)
-        
-        log_operation(request, 'export', 'reports', 'ReportInstance', instance.id,
-                     f'下载报表 {instance.name}')
-        
-        # 返回文件下载响应
-        from django.http import FileResponse
-        response = FileResponse(instance.file)
-        response['Content-Disposition'] = f'attachment; filename="{instance.file.name}"'
-        return response
 
 
 class DashboardViewSet(viewsets.ModelViewSet):
     """仪表盘管理"""
     queryset = Dashboard.objects.all()
     serializer_class = DashboardSerializer
-    
-    def get_permissions(self):
-        from rest_framework.permissions import IsAuthenticated
-        return [IsAuthenticated()]
-    
-    def get_queryset(self):
-        user = self.request.user
-        if user.role == 'admin':
-            return Dashboard.objects.all()
-        
-        # 公开的仪表盘
-        public_dashboards = Dashboard.objects.filter(is_public=True)
-        
-        # 允许访问的仪表盘
-        allowed_dashboards = Dashboard.objects.filter(allowed_users=user)
-        
-        # 角色允许的仪表盘
-        role_dashboards = Dashboard.objects.filter(allowed_roles__contains=[user.role])
-        
-        return (public_dashboards | allowed_dashboards | role_dashboards).distinct()
-    
-    def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
+    filter_backends = [SearchFilter, OrderingFilter]
+    search_fields = ['name', 'description']
+    ordering_fields = ['created_at']
+    ordering = ['-created_at']
 
 
 class ScheduledReportViewSet(viewsets.ModelViewSet):
     """定时报表管理"""
-    queryset = ScheduledReport.objects.all()
+    queryset = ScheduledReport.objects.select_related('report').all()
     serializer_class = ScheduledReportSerializer
-    
-    def get_permissions(self):
-        from rest_framework.permissions import IsAuthenticated
-        return [IsAuthenticated()]
-    
-    def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
-    
-    @action(detail=True, methods=['post'])
-    def toggle(self, request, pk=None):
-        """启用/禁用定时任务"""
-        scheduled = self.get_object()
-        scheduled.is_active = not scheduled.is_active
-        scheduled.save()
-        
-        return Response({
-            'success': True,
-            'is_active': scheduled.is_active
-        })
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    filterset_fields = ['report', 'is_active', 'frequency']
+    search_fields = ['name']
+    ordering_fields = ['created_at']
+    ordering = ['-created_at']

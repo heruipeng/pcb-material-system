@@ -10,7 +10,6 @@ from .serializers import (
     ToolSerializer, ToolCategorySerializer, ToolExecutionSerializer,
     ToolTemplateSerializer, ToolOutputSerializer
 )
-from accounts.permissions import PERM_TOOL_USE, PERM_TOOL_CONFIG
 from core.utils import log_operation
 
 
@@ -18,37 +17,29 @@ class ToolCategoryViewSet(viewsets.ModelViewSet):
     """工具分类管理"""
     queryset = ToolCategory.objects.filter(is_active=True)
     serializer_class = ToolCategorySerializer
-    
-    def get_permissions(self):
-        from rest_framework.permissions import IsAuthenticated
-        return [IsAuthenticated()]
+    filter_backends = [SearchFilter, OrderingFilter]
+    search_fields = ['name', 'code']
+    ordering_fields = ['sort_order', 'id']
+    ordering = ['sort_order', 'id']
 
 
 class ToolViewSet(viewsets.ModelViewSet):
-    """工具管理"""
-    queryset = Tool.objects.filter(is_active=True)
+    """工具管理 - 完整 CRUD + 执行/模板"""
+    queryset = Tool.objects.select_related('category').filter(is_active=True)
     serializer_class = ToolSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ['tool_type', 'category']
+    filterset_fields = ['tool_type', 'category', 'is_active']
     search_fields = ['name', 'code', 'description']
-    ordering_fields = ['created_at', 'name']
-    ordering = ['-created_at']
-    
-    def get_permissions(self):
-        from rest_framework.permissions import IsAuthenticated
-        return [IsAuthenticated()]
-    
+    ordering_fields = ['created_at', 'name', 'sort_order']
+    ordering = ['sort_order', 'id']
+
     @action(detail=True, methods=['post'])
     def execute(self, request, pk=None):
         """执行工具"""
-        if not request.user.has_permission(PERM_TOOL_USE):
-            return Response({'error': '没有使用工具的权限'}, status=status.HTTP_403_FORBIDDEN)
-        
         tool = self.get_object()
         material_id = request.data.get('material_id')
         params = request.data.get('params', {})
-        
-        # 创建执行记录
+
         execution = ToolExecution.objects.create(
             tool=tool,
             material_id=material_id,
@@ -56,19 +47,16 @@ class ToolViewSet(viewsets.ModelViewSet):
             status='pending',
             executor=request.user
         )
-        
-        # 异步执行工具（实际项目中使用Celery）
-        # execute_tool.delay(execution.id)
-        
-        log_operation(request, 'create', 'tools', 'ToolExecution', execution.id, 
+
+        log_operation(request, 'create', 'tools', 'ToolExecution', execution.id,
                      f'执行工具 {tool.name}')
-        
+
         return Response({
             'success': True,
             'execution_id': execution.id,
             'status': execution.status
         })
-    
+
     @action(detail=True, methods=['get'])
     def templates(self, request, pk=None):
         """获取工具模板"""
@@ -79,36 +67,25 @@ class ToolViewSet(viewsets.ModelViewSet):
 
 
 class ToolExecutionViewSet(viewsets.ReadOnlyModelViewSet):
-    """工具执行记录"""
-    queryset = ToolExecution.objects.all()
+    """工具执行记录 - 只读 + 取消/输出"""
+    queryset = ToolExecution.objects.select_related('tool', 'material', 'executor').all()
     serializer_class = ToolExecutionSerializer
-    filter_backends = [DjangoFilterBackend, OrderingFilter]
-    filterset_fields = ['tool', 'status', 'executor']
-    ordering_fields = ['created_at', 'started_at', 'completed_at']
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = ['tool', 'tool__tool_type', 'status', 'executor']
+    search_fields = ['material__serial_no', 'failure_reason']
+    ordering_fields = ['created_at', 'started_at', 'completed_at', 'duration', 'status']
     ordering = ['-created_at']
-    
-    def get_permissions(self):
-        from rest_framework.permissions import IsAuthenticated
-        return [IsAuthenticated()]
-    
-    def get_queryset(self):
-        user = self.request.user
-        if user.role == 'admin':
-            return ToolExecution.objects.all()
-        return ToolExecution.objects.filter(executor=user)
-    
+
     @action(detail=True, methods=['post'])
     def cancel(self, request, pk=None):
         """取消执行"""
         execution = self.get_object()
         if execution.status in ['completed', 'failed', 'cancelled']:
             return Response({'error': '当前状态不能取消'}, status=status.HTTP_400_BAD_REQUEST)
-        
         execution.status = 'cancelled'
         execution.save()
-        
         return Response({'status': 'cancelled'})
-    
+
     @action(detail=True, methods=['get'])
     def outputs(self, request, pk=None):
         """获取执行输出"""
@@ -120,22 +97,21 @@ class ToolExecutionViewSet(viewsets.ReadOnlyModelViewSet):
 
 class ToolTemplateViewSet(viewsets.ModelViewSet):
     """工具模板管理"""
-    queryset = ToolTemplate.objects.all()
+    queryset = ToolTemplate.objects.select_related('tool').all()
     serializer_class = ToolTemplateSerializer
-    
-    def get_permissions(self):
-        from rest_framework.permissions import IsAuthenticated
-        return [IsAuthenticated()]
-    
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    filterset_fields = ['tool', 'is_default']
+    search_fields = ['name', 'description']
+
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
 
 
 class ToolOutputViewSet(viewsets.ReadOnlyModelViewSet):
     """工具输出管理"""
-    queryset = ToolOutput.objects.all()
+    queryset = ToolOutput.objects.select_related('execution').all()
     serializer_class = ToolOutputSerializer
-    
-    def get_permissions(self):
-        from rest_framework.permissions import IsAuthenticated
-        return [IsAuthenticated()]
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filterset_fields = ['execution']
+    ordering_fields = ['created_at']
+    ordering = ['-created_at']
