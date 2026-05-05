@@ -19,23 +19,28 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-# 动态生成并写入 .env 文件（首次运行时自动生成）
+# 优先从环境变量读取；开发环境使用固定 key，生产从 .env 覆盖
 def _get_or_create_secret_key():
     env_file = BASE_DIR / '.env'
     key = os.getenv('SECRET_KEY', '')
-    if not key:
-        key = os.urandom(50).hex()
-        # 仅在 .env 不存在或其中没有 SECRET_KEY 时写入
-        existing = env_file.read_text() if env_file.exists() else ''
-        if 'SECRET_KEY' not in existing:
-            with open(env_file, 'a') as f:
-                f.write(f'\nSECRET_KEY={key}\n')
+    if key:
+        return key
+    # 尝试从 .env 文件读取
+    if env_file.exists():
+        content = env_file.read_text()
+        for line in content.splitlines():
+            if line.startswith('SECRET_KEY='):
+                return line.split('=', 1)[1].strip().strip('"').strip("'")
+    # 开发回退：写入 .env 避免每次重启重置 session
+    key = os.urandom(24).hex()
+    with open(env_file, 'a') as f:
+        f.write(f'\nSECRET_KEY={key}\n')
     return key
 
 SECRET_KEY = _get_or_create_secret_key()
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
+DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
 
@@ -108,7 +113,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': os.getenv('DB_NAME', 'test'),
         'USER': os.getenv('DB_USER', 'root'),
-        'PASSWORD': os.getenv('DB_PASSWORD', ''),
+        'PASSWORD': os.getenv('DB_PASSWORD', 'MyPassword123!@#'),
         'HOST': os.getenv('DB_HOST', '192.168.127.131'),
         'PORT': os.getenv('DB_PORT', '3306'),
         'OPTIONS': {
