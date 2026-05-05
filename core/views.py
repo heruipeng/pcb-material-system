@@ -261,7 +261,6 @@ def api_root(request):
             'logs': '?action=create&module=materials&ordering=-created_at',
         },
     })
-ENDPROXY
 
 # ===== 自定义登录视图 =====
 from django.contrib.auth import authenticate, login as auth_login
