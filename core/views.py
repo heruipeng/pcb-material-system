@@ -280,6 +280,7 @@ def api_root(request):
     })
 
 # ===== 自定义登录视图 =====
+from django.contrib.auth import authenticate, login as auth_login, get_user_model
 from django.contrib.auth.views import LoginView
 
 User = get_user_model()
