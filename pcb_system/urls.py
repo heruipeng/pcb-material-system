@@ -6,10 +6,16 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 from materials.views import material_list_page, dashboard_page, tool_list_page, report_list_page, material_detail_page, tool_detail_page, report_detail_page
 from core.views import manage_users, system_settings, CustomLoginView
 
 urlpatterns = [
+    # API 接口文档
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+    
     path('admin/', admin.site.urls),
     path('api/auth/', include('accounts.urls')),
     path('api/materials/', include('materials.urls')),
