@@ -79,7 +79,6 @@ class MaterialAttachmentSerializer(serializers.ModelSerializer):
         if ext not in self.ALLOWED_EXTENSIONS:
             raise serializers.ValidationError(f'不支持的文件类型：{ext}。允许的类型：{", ".join(self.ALLOWED_EXTENSIONS)}')
         if value.size > self.MAX_FILE_SIZE:
-            from .views import format_file_size as _fmt
             raise serializers.ValidationError(f'文件大小超过限制，最大允许 10MB')
         return value
 

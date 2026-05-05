@@ -51,6 +51,8 @@ class OperationLog(models.Model):
         ('import', '导入'),
         ('login', '登录'),
         ('logout', '登出'),
+        ('approve', '审批'),
+        ('reject', '驳回'),
         ('other', '其他'),
     ]
     

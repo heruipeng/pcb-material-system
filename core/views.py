@@ -69,7 +69,7 @@ class OperationLogViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = OperationLogSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['action', 'module', 'user']
-    search_fields = ['remark', 'object_type']
+    search_fields = ['description', 'object_type']
     ordering_fields = ['created_at', 'id']
     ordering = ['-created_at']
 
@@ -115,7 +115,7 @@ class FileStorageViewSet(viewsets.ModelViewSet):
     serializer_class = FileStorageSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['file_type']
-    search_fields = ['file_name', 'description']
+    search_fields = ['file_name']
     ordering_fields = ['created_at', 'file_size']
 
     def perform_create(self, serializer):
@@ -280,7 +280,6 @@ def api_root(request):
     })
 
 # ===== 自定义登录视图 =====
-from django.contrib.auth import authenticate, login as auth_login, get_user_model
 from django.contrib.auth.views import LoginView
 
 User = get_user_model()
@@ -315,7 +314,7 @@ class CustomLoginView(LoginView):
 @login_required(login_url='/login/')
 def manage_users(request):
     """用户管理页面"""
-    from accounts.models import User as AUser, Permission, RolePermission
+    from accounts.models import User as AUser
     from core.models import Factory
 
     factories = Factory.objects.filter(is_active=True)

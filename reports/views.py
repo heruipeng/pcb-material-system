@@ -110,8 +110,8 @@ class ReportViewSet(viewsets.ModelViewSet):
                 'status': status_filter,
                 'process_type': process_type,
             },
-            date_from=timezone.datetime.strptime(date_from, '%Y-%m-%d').date() if date_from else None,
-            date_to=timezone.datetime.strptime(date_to, '%Y-%m-%d').date() if date_to else None,
+            date_from=datetime.strptime(date_from, '%Y-%m-%d').date() if date_from else None,
+            date_to=datetime.strptime(date_to, '%Y-%m-%d').date() if date_to else None,
             file=f'reports/{filename}',
             file_format='xlsx',
             file_size=os.path.getsize(filepath),
@@ -152,7 +152,7 @@ class ReportViewSet(viewsets.ModelViewSet):
         instance = report.instances.filter(status='completed').order_by('-generated_at').first()
         if instance and instance.file:
             return Response({'file_url': instance.file.url, 'file_name': instance.file.name})
-        return Response({'error': '没有可下载的文件'}, status=404)
+        return Response({'error': '没有可下载的文件'}, status=status.HTTP_404_NOT_FOUND)
 
 class ReportInstanceViewSet(viewsets.ReadOnlyModelViewSet):
     """报表实例 - 只读"""

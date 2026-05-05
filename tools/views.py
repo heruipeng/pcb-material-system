@@ -80,7 +80,7 @@ class ToolViewSet(viewsets.ModelViewSet):
     def templates(self, request, pk=None):
         """获取工具模板"""
         tool = self.get_object()
-        templates = tool.templates.filter(is_active=True)
+        templates = tool.templates.all()
         serializer = ToolTemplateSerializer(templates, many=True)
         return Response(serializer.data)
 

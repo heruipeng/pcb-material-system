@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.exceptions import PermissionDenied
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django.utils import timezone
@@ -63,13 +64,14 @@ def material_list_page(request):
         queryset = queryset.filter(created_at__date__lte=date_to)
     
     # 状态统计（使用权限过滤后的 queryset 统计）
-    from django.db.models import Count
     status_stats = queryset.aggregate(
         all_count=Count('id'),
         unmade_count=Count('id', filter=Q(status='unmade')),
         making_count=Count('id', filter=Q(status='making')),
         completed_count=Count('id', filter=Q(status='completed')),
         audited_count=Count('id', filter=Q(status='audited')),
+        rejected_count=Count('id', filter=Q(status='rejected')),
+        archived_count=Count('id', filter=Q(status='archived')),
     )
     status_counts = {
         'all': status_stats['all_count'],
@@ -77,6 +79,8 @@ def material_list_page(request):
         'making': status_stats['making_count'],
         'completed': status_stats['completed_count'],
         'audited': status_stats['audited_count'],
+        'rejected': status_stats['rejected_count'],
+        'archived': status_stats['archived_count'],
     }
     
     # 分页
@@ -239,7 +243,7 @@ class MaterialViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         """创建资料"""
         if not self.request.user.has_permission(PERM_MATERIAL_CREATE):
-            raise PermissionError('没有创建资料的权限')
+            raise PermissionDenied('没有创建资料的权限')
         
         material = serializer.save(creator=self.request.user)
         
@@ -257,7 +261,7 @@ class MaterialViewSet(viewsets.ModelViewSet):
     def perform_update(self, serializer):
         """更新资料"""
         if not self.request.user.has_permission(PERM_MATERIAL_EDIT):
-            raise PermissionError('没有编辑资料的权限')
+            raise PermissionDenied('没有编辑资料的权限')
         
         material = serializer.save()
         
@@ -330,6 +334,30 @@ class MaterialViewSet(viewsets.ModelViewSet):
         
         return Response({'status': 'rejected'})
     
+    @action(detail=True, methods=['post'])
+    def generate(self, request, pk=None):
+        """生成资料 - 触发工具执行流程"""
+        material = self.get_object()
+        if material.status not in ['unmade', 'making']:
+            return Response(
+                {'error': f'当前状态「{material.get_status_display()}」不允许生成'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if material.status == 'unmade':
+            material.status = 'making'
+            material.maker = request.user
+            material.save()
+
+        MaterialHistory.objects.create(
+            material=material,
+            action='publish',
+            operator=request.user,
+            remark='生成资料'
+        )
+        log_operation(request, 'create', 'materials', 'Material', material.id,
+                     f'触发生成资料 {material.serial_no}')
+        return Response({'success': True, 'status': material.status})
+
     @action(detail=True, methods=['post'])
     def publish(self, request, pk=None):
         """发布资料"""

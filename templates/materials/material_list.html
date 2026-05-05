@@ -106,11 +106,11 @@
         <div>共 <strong>{{ page_obj.paginator.count }}</strong> 条</div>
         <div class="pagination">
             {% if page_obj.has_previous %}
-            <a class="page-btn" href="?page={{ page_obj.previous_page_number }}&status={{ request.GET.status|default:'' }}&keyword={{ request.GET.keyword|default:'' }}&factory={{ request.GET.factory|default:'' }}">上一页</a>
+            <a class="page-btn" href="?{% if request.GET.status %}status={{ request.GET.status|urlencode }}&{% endif %}{% if request.GET.keyword %}keyword={{ request.GET.keyword|urlencode }}&{% endif %}{% if request.GET.factory %}factory={{ request.GET.factory|urlencode }}&{% endif %}{% if request.GET.process_type %}process_type={{ request.GET.process_type|urlencode }}&{% endif %}{% if request.GET.date_from %}date_from={{ request.GET.date_from|urlencode }}&{% endif %}{% if request.GET.date_to %}date_to={{ request.GET.date_to|urlencode }}&{% endif %}page={{ page_obj.previous_page_number }}">上一页</a>
             {% endif %}
             <span class="page-btn active">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
             {% if page_obj.has_next %}
-            <a class="page-btn" href="?page={{ page_obj.next_page_number }}&status={{ request.GET.status|default:'' }}&keyword={{ request.GET.keyword|default:'' }}&factory={{ request.GET.factory|default:'' }}">下一页</a>
+            <a class="page-btn" href="?{% if request.GET.status %}status={{ request.GET.status|urlencode }}&{% endif %}{% if request.GET.keyword %}keyword={{ request.GET.keyword|urlencode }}&{% endif %}{% if request.GET.factory %}factory={{ request.GET.factory|urlencode }}&{% endif %}{% if request.GET.process_type %}process_type={{ request.GET.process_type|urlencode }}&{% endif %}{% if request.GET.date_from %}date_from={{ request.GET.date_from|urlencode }}&{% endif %}{% if request.GET.date_to %}date_to={{ request.GET.date_to|urlencode }}&{% endif %}page={{ page_obj.next_page_number }}">下一页</a>
             {% endif %}
         </div>
     </div>
@@ -143,8 +143,12 @@ function generateDoc(id) {
         headers: {'Content-Type':'application/json','X-CSRFToken':getCsrf()}
     }).then(r => r.json()).then(d => {
         hideLoading();
-        if (d.success) { alert('生成成功！任务ID：' + escapeHtml(d.execution_id)); }
-        else { alert('生成失败：' + escapeHtml(d.error || '未知错误')); }
+        if (d.success) {
+            alert('生成成功！当前状态：' + escapeHtml(d.status));
+            location.reload();
+        } else {
+            alert('生成失败：' + escapeHtml(d.error || '未知错误'));
+        }
     }).catch(err => {
         hideLoading();
         alert('请求失败，请检查网络连接');
