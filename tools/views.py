@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django.utils import timezone
+from drf_spectacular.utils import extend_schema
 
 from .models import Tool, ToolCategory, ToolExecution, ToolTemplate, ToolOutput
 from .serializers import (
@@ -57,6 +58,7 @@ class ToolViewSet(viewsets.ModelViewSet):
             'status': execution.status
         })
 
+    @extend_schema(operation_id='tool_instance_templates', summary='获取工具的模板列表')
     @action(detail=True, methods=['get'])
     def templates(self, request, pk=None):
         """获取工具模板"""

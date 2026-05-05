@@ -180,8 +180,12 @@ SPECTACULAR_SETTINGS = {
     'VERSION': '2.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
     'ENUM_NAME_OVERRIDES': {
-        'materials.models.Material.status': 'MaterialStatusEnum',
-        'tools.models.ToolExecution.status': 'ExecutionStatusEnum',
+        # 三个模型各有不同的 status choices，需要不同的枚举名
+        'MaterialStatusEnum': 'materials.models.Material.STATUS_CHOICES',
+        'ReportStatusEnum': 'reports.models.ReportInstance.STATUS_CHOICES',
+        'ExecutionStatusEnum': 'tools.models.ToolExecution.STATUS_CHOICES',
+        # process_type 和 tool_type 值完全相同，指定统一名称
+        'ProcessTypeEnum': 'materials.models.Material.PROCESS_TYPE_CHOICES',
     },
 }
 
