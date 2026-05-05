@@ -61,3 +61,64 @@ class FileStorageSerializer(serializers.ModelSerializer):
         if obj.file:
             return obj.file.url
         return None
+
+
+# ===== 响应序列化器（用于 swagger 文档） =====
+
+class MaterialStatsSerializer(serializers.Serializer):
+    """资料统计"""
+    total = serializers.IntegerField()
+    today = serializers.IntegerField()
+    week = serializers.IntegerField()
+    month = serializers.IntegerField()
+    unmade = serializers.IntegerField()
+    making = serializers.IntegerField()
+    completed = serializers.IntegerField()
+    audited = serializers.IntegerField()
+
+
+class ToolStatsSerializer(serializers.Serializer):
+    """工具执行统计"""
+    total = serializers.IntegerField()
+    today = serializers.IntegerField()
+    week = serializers.IntegerField()
+    completed = serializers.IntegerField()
+    failed = serializers.IntegerField()
+    running = serializers.IntegerField()
+    pending = serializers.IntegerField()
+
+
+class ReportStatsSerializer(serializers.Serializer):
+    """报表统计"""
+    total = serializers.IntegerField()
+    today = serializers.IntegerField()
+    week = serializers.IntegerField()
+
+
+class StatusCountSerializer(serializers.Serializer):
+    """按状态统计"""
+    status = serializers.CharField()
+    count = serializers.IntegerField()
+
+
+class DashboardStatsSerializer(serializers.Serializer):
+    """仪表盘统计数据响应"""
+    material_stats = MaterialStatsSerializer()
+    tool_stats = ToolStatsSerializer()
+    report_stats = ReportStatsSerializer()
+    status_stats = StatusCountSerializer(many=True)
+
+
+class SystemInfoSerializer(serializers.Serializer):
+    """系统信息响应"""
+    django_version = serializers.CharField()
+    python_version = serializers.CharField()
+    os = serializers.CharField()
+    timezone = serializers.CharField()
+
+
+class ApiRootSerializer(serializers.Serializer):
+    """API接口总览响应"""
+    name = serializers.CharField()
+    version = serializers.CharField()
+    endpoints = serializers.DictField()
