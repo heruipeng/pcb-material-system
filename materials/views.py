@@ -272,7 +272,7 @@ class MaterialViewSet(viewsets.ModelViewSet):
         material = self.get_object()
         remark = request.data.get('remark', '')
         
-        material.status = 'approved'
+        material.status = 'audited'
         material.approver = request.user
         material.approved_at = timezone.now()
         material.approve_remark = remark
@@ -288,7 +288,7 @@ class MaterialViewSet(viewsets.ModelViewSet):
         
         log_operation(request, 'approve', 'materials', 'Material', material.id, f'审批通过资料 {material.serial_no}')
         
-        return Response({'status': 'approved'})
+        return Response({'status': 'audited'})
     
     @action(detail=True, methods=['post'])
     def reject(self, request, pk=None):
@@ -320,7 +320,8 @@ class MaterialViewSet(viewsets.ModelViewSet):
     def publish(self, request, pk=None):
         """发布资料"""
         material = self.get_object()
-        material.status = 'published'
+        material.status = 'completed'
+        material.completed_at = timezone.now()
         material.save()
         
         MaterialHistory.objects.create(
@@ -330,7 +331,7 @@ class MaterialViewSet(viewsets.ModelViewSet):
             remark='发布资料'
         )
         
-        return Response({'status': 'published'})
+        return Response({'status': 'completed'})
     
     @action(detail=True, methods=['get'])
     def history(self, request, pk=None):

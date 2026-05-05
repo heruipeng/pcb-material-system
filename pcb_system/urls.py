@@ -22,6 +22,7 @@ urlpatterns = [
     path('api/tools/', include('tools.urls')),
     path('api/reports/', include('reports.urls')),
     path('api/core/', include('core.urls')),
+    path('api/production/', include('production.urls')),
     
     # 页面路由
     path('', dashboard_page, name='dashboard'),

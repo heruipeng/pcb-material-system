@@ -50,7 +50,7 @@ class Material(models.Model):
     category = models.ForeignKey(MaterialCategory, on_delete=models.SET_NULL, null=True, verbose_name='分类')
     
     # 状态信息
-    status = models.CharField('状态', max_length=20, choices=STATUS_CHOICES, default='draft')
+    status = models.CharField('状态', max_length=20, choices=STATUS_CHOICES, default='unmade')
     remark = models.TextField('备注', blank=True)
     
     # 文件信息
@@ -92,11 +92,11 @@ class Material(models.Model):
     def get_status_display_color(self):
         """获取状态显示颜色"""
         color_map = {
-            'draft': 'gray',
-            'pending': 'orange',
-            'approved': 'blue',
+            'unmade': 'gray',
+            'making': 'orange',
+            'completed': 'green',
+            'audited': 'blue',
             'rejected': 'red',
-            'published': 'green',
             'archived': 'purple',
         }
         return color_map.get(self.status, 'gray')
