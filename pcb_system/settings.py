@@ -175,9 +175,9 @@ REST_FRAMEWORK = {
 
 # drf-spectacular 接口文档配置
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'PCB DFM 系统 API',
-    'DESCRIPTION': 'PCB物料管理系统后端接口文档',
-    'VERSION': '1.0.0',
+    'TITLE': '工程资料管理系统 V2.0 API',
+    'DESCRIPTION': '工程资料管理系统后端接口文档',
+    'VERSION': '2.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
 }
 
