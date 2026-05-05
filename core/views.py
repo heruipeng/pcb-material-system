@@ -11,6 +11,7 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 from django.db.models import Count
 from datetime import datetime, timedelta
 
+from drf_spectacular.utils import extend_schema
 from .models import Factory, SystemConfig, OperationLog, Notification, FileStorage
 from .serializers import (
     FactorySerializer, SystemConfigSerializer, OperationLogSerializer,
@@ -122,6 +123,7 @@ class FileStorageViewSet(viewsets.ModelViewSet):
 
 # ===== 统计与系统信息 API =====
 
+@extend_schema(summary='仪表盘统计数据', tags=['统计'])
 @api_view(['GET'])
 def dashboard_stats(request):
     """首页仪表盘统计数据"""
@@ -174,6 +176,7 @@ def dashboard_stats(request):
     })
 
 
+@extend_schema(summary='系统信息', tags=['系统'])
 @api_view(['GET'])
 def system_info(request):
     """系统信息"""
@@ -187,6 +190,7 @@ def system_info(request):
     })
 
 
+@extend_schema(summary='API接口总览', tags=['系统'])
 @api_view(['GET'])
 def api_root(request):
     """API 接口总览"""

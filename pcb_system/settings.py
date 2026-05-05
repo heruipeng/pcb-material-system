@@ -179,6 +179,10 @@ SPECTACULAR_SETTINGS = {
     'DESCRIPTION': '工程资料管理系统后端接口文档',
     'VERSION': '2.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
+    'ENUM_NAME_OVERRIDES': {
+        'materials.models.Material.status': 'MaterialStatusEnum',
+        'tools.models.ToolExecution.status': 'ExecutionStatusEnum',
+    },
 }
 
 # CORS settings

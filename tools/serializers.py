@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 from .models import Tool, ToolCategory, ToolExecution, ToolTemplate, ToolOutput
 
 
@@ -65,6 +66,7 @@ class ToolOutputSerializer(serializers.ModelSerializer):
         fields = ['id', 'execution', 'output_type', 'output_type_display', 
                  'name', 'file', 'file_url', 'data', 'description', 'created_at']
     
+    @extend_schema_field(serializers.URLField)
     def get_file_url(self, obj):
         if obj.file:
             return obj.file.url

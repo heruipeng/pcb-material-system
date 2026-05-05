@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 from .models import Material, MaterialCategory, MaterialHistory, MaterialAttachment
 
 
@@ -69,5 +70,6 @@ class MaterialAttachmentSerializer(serializers.ModelSerializer):
         fields = ['id', 'material', 'file', 'file_url', 'file_name', 'file_size',
                   'file_type', 'description', 'uploaded_by', 'uploaded_by_name', 'uploaded_at']
 
+    @extend_schema_field(serializers.URLField)
     def get_file_url(self, obj):
         return obj.file.url if obj.file else None

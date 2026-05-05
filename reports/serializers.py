@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 from .models import Report, ReportCategory, ReportInstance, Dashboard, ScheduledReport
 
 
@@ -41,6 +42,7 @@ class ReportInstanceSerializer(serializers.ModelSerializer):
             'generated_by', 'generated_by_name', 'generated_at', 'completed_at'
         ]
     
+    @extend_schema_field(serializers.URLField)
     def get_file_url(self, obj):
         if obj.file:
             return obj.file.url

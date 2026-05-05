@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 from .models import Factory, SystemConfig, OperationLog, Notification, FileStorage
 
 
@@ -55,6 +56,7 @@ class FileStorageSerializer(serializers.ModelSerializer):
             'uploaded_by', 'uploaded_by_name', 'uploaded_at'
         ]
     
+    @extend_schema_field(serializers.URLField)
     def get_file_url(self, obj):
         if obj.file:
             return obj.file.url
