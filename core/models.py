@@ -61,6 +61,12 @@ class OperationLog(models.Model):
     object_type = models.CharField('对象类型', max_length=50)
     object_id = models.CharField('对象ID', max_length=50, blank=True)
     description = models.TextField('描述')
+    
+    def save(self, *args, **kwargs):
+        # 兼容 object_id 为整型的场景
+        if self.object_id and not isinstance(self.object_id, str):
+            self.object_id = str(self.object_id)
+        super().save(*args, **kwargs)
     ip_address = models.GenericIPAddressField('IP地址', null=True, blank=True)
     user_agent = models.TextField('User Agent', blank=True)
     

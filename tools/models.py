@@ -101,6 +101,11 @@ class ToolExecution(models.Model):
         verbose_name = '工具执行记录'
         verbose_name_plural = '工具执行记录'
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['status']),
+            models.Index(fields=['tool', 'status']),
+            models.Index(fields=['-created_at']),
+        ]
         
     def __str__(self):
         return f"{self.tool.name} - {self.material.serial_no}"

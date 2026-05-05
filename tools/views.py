@@ -40,22 +40,39 @@ class ToolViewSet(viewsets.ModelViewSet):
         tool = self.get_object()
         material_id = request.data.get('material_id')
         params = request.data.get('params', {})
-
+        
+        # 参数校验
+        if not material_id:
+            return Response({'error': '缺少 material_id 参数'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            from materials.models import Material
+            material = Material.objects.get(pk=material_id)
+        except Material.DoesNotExist:
+            return Response({'error': f'资料 ID={material_id} 不存在'}, status=status.HTTP_404_NOT_FOUND)
+        
         execution = ToolExecution.objects.create(
             tool=tool,
-            material_id=material_id,
+            material=material,
             params={**tool.default_params, **params},
             status='pending',
             executor=request.user
         )
+        
+        # 关联资料自动设置状态为制作中
+        if material.status == 'unmade':
+            material.status = 'making'
+            material.maker = request.user
+            material.save()
 
         log_operation(request, 'create', 'tools', 'ToolExecution', execution.id,
-                     f'执行工具 {tool.name}')
+                     f'执行工具 {tool.name} 于资料 {material.serial_no}')
 
         return Response({
             'success': True,
             'execution_id': execution.id,
-            'status': execution.status
+            'status': execution.status,
+            'material_status': material.status,
         })
 
     @extend_schema(operation_id='tool_instance_templates', summary='获取工具的模板列表')

@@ -84,6 +84,7 @@ class Material(models.Model):
             models.Index(fields=['material_no']),
             models.Index(fields=['status']),
             models.Index(fields=['factory', 'status']),
+            models.Index(fields=['process_type']),
         ]
         
     def __str__(self):

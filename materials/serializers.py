@@ -64,11 +64,24 @@ class MaterialHistorySerializer(serializers.ModelSerializer):
 class MaterialAttachmentSerializer(serializers.ModelSerializer):
     uploaded_by_name = serializers.CharField(source='uploaded_by.username', read_only=True, default='')
     file_url = serializers.SerializerMethodField()
+    
+    ALLOWED_EXTENSIONS = ['.zip', '.rar', '.7z', '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.jpg', '.jpeg', '.png', '.gif']
+    MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 
     class Meta:
         model = MaterialAttachment
         fields = ['id', 'material', 'file', 'file_url', 'file_name', 'file_size',
                   'file_type', 'description', 'uploaded_by', 'uploaded_by_name', 'uploaded_at']
+    
+    def validate_file(self, value):
+        import os
+        ext = os.path.splitext(value.name)[1].lower()
+        if ext not in self.ALLOWED_EXTENSIONS:
+            raise serializers.ValidationError(f'不支持的文件类型：{ext}。允许的类型：{", ".join(self.ALLOWED_EXTENSIONS)}')
+        if value.size > self.MAX_FILE_SIZE:
+            from .views import format_file_size as _fmt
+            raise serializers.ValidationError(f'文件大小超过限制，最大允许 10MB')
+        return value
 
     @extend_schema_field(serializers.URLField)
     def get_file_url(self, obj):

@@ -97,6 +97,10 @@ class ReportInstance(models.Model):
         verbose_name = '报表实例'
         verbose_name_plural = '报表实例'
         ordering = ['-generated_at']
+        indexes = [
+            models.Index(fields=['report', '-generated_at']),
+            models.Index(fields=['status']),
+        ]
         
     def __str__(self):
         return f"{self.report.name} - {self.name}"

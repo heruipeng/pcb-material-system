@@ -1,5 +1,13 @@
 // PCB工程资料管理系统 - 主JavaScript文件
 
+// 简单的 HTML 转义函数，防止 XSS
+function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.appendChild(document.createTextNode(str));
+    return div.innerHTML;
+}
+
 // CSRF Token获取
 function getCookie(name) {
     let cookieValue = null;
@@ -22,49 +30,85 @@ const api = {
         const queryString = new URLSearchParams(params).toString();
         const fullUrl = queryString ? `${url}?${queryString}` : url;
         
-        const response = await fetch(fullUrl, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
+        try {
+            const response = await fetch(fullUrl, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            });
+            if (!response.ok) {
+                console.error('API GET 错误:', response.status, fullUrl);
+                return { error: `请求失败 (${response.status})` };
             }
-        });
-        return response.json();
+            return response.json();
+        } catch (err) {
+            console.error('API GET 异常:', err);
+            return { error: '网络请求失败，请检查连接' };
+        }
     },
     
     post: async (url, data = {}) => {
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
-            },
-            body: JSON.stringify(data)
-        });
-        return response.json();
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify(data)
+            });
+            if (!response.ok) {
+                console.error('API POST 错误:', response.status, url);
+                return { error: `请求失败 (${response.status})` };
+            }
+            return response.json();
+        } catch (err) {
+            console.error('API POST 异常:', err);
+            return { error: '网络请求失败，请检查连接' };
+        }
     },
     
     put: async (url, data = {}) => {
-        const response = await fetch(url, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
-            },
-            body: JSON.stringify(data)
-        });
-        return response.json();
+        try {
+            const response = await fetch(url, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify(data)
+            });
+            if (!response.ok) {
+                console.error('API PUT 错误:', response.status, url);
+                return { error: `请求失败 (${response.status})` };
+            }
+            return response.json();
+        } catch (err) {
+            console.error('API PUT 异常:', err);
+            return { error: '网络请求失败，请检查连接' };
+        }
     },
     
     delete: async (url) => {
-        const response = await fetch(url, {
-            method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
+        try {
+            const response = await fetch(url, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            });
+            if (!response.ok) {
+                console.error('API DELETE 错误:', response.status, url);
+                return { error: `请求失败 (${response.status})` };
             }
-        });
-        return response.json();
+            return response.json();
+        } catch (err) {
+            console.error('API DELETE 异常:', err);
+            return { error: '网络请求失败，请检查连接' };
+        }
     }
 };
 

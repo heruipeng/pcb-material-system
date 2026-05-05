@@ -7,6 +7,9 @@ Django settings for pcb_system project.
 
 from pathlib import Path
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -16,12 +19,25 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-your-secret-key-here-change-in-production'
+# 动态生成并写入 .env 文件（首次运行时自动生成）
+def _get_or_create_secret_key():
+    env_file = BASE_DIR / '.env'
+    key = os.getenv('SECRET_KEY', '')
+    if not key:
+        key = os.urandom(50).hex()
+        # 仅在 .env 不存在或其中没有 SECRET_KEY 时写入
+        existing = env_file.read_text() if env_file.exists() else ''
+        if 'SECRET_KEY' not in existing:
+            with open(env_file, 'a') as f:
+                f.write(f'\nSECRET_KEY={key}\n')
+    return key
+
+SECRET_KEY = _get_or_create_secret_key()
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
 
 
 # Application definition
@@ -90,11 +106,11 @@ WSGI_APPLICATION = 'pcb_system.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'test',
-        'USER': 'root',
-        'PASSWORD': 'MyPassword123!@#',
-        'HOST': '192.168.127.131',
-        'PORT': '3306',
+        'NAME': os.getenv('DB_NAME', 'test'),
+        'USER': os.getenv('DB_USER', 'root'),
+        'PASSWORD': os.getenv('DB_PASSWORD', ''),
+        'HOST': os.getenv('DB_HOST', '192.168.127.131'),
+        'PORT': os.getenv('DB_PORT', '3306'),
         'OPTIONS': {
             'charset': 'utf8mb4',
         },
@@ -172,6 +188,15 @@ REST_FRAMEWORK = {
         'rest_framework.filters.OrderingFilter',
     ],
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    # API 频率限制
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/hour',
+        'user': '1000/hour',
+    },
 }
 
 # drf-spectacular 接口文档配置
@@ -191,7 +216,11 @@ SPECTACULAR_SETTINGS = {
 }
 
 # CORS settings
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', 'http://127.0.0.1:8000,http://localhost:8000').split(',')
+
+# CSRF 安全配置
+CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', 'http://127.0.0.1:8000,http://localhost:8000').split(',')
 
 # Logging
 LOGGING = {
@@ -211,9 +240,11 @@ LOGGING = {
         },
         'file': {
             'level': 'INFO',
-            'class': 'logging.FileHandler',
+            'class': 'logging.handlers.RotatingFileHandler',
             'filename': BASE_DIR / 'logs' / 'django.log',
             'formatter': 'verbose',
+            'maxBytes': 10 * 1024 * 1024,  # 10MB
+            'backupCount': 5,
         },
     },
     'loggers': {
@@ -235,13 +266,23 @@ LOGGING = {
     },
 }
 
-# File upload settings
-FILE_UPLOAD_MAX_MEMORY_SIZE = 5242880  # 5MB
-DATA_UPLOAD_MAX_MEMORY_SIZE = 5242880  # 5MB
+# File upload settings (统一为 10MB)
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
 
 # PCB System specific settings
 PCB_SETTINGS = {
-    'MAX_FILE_SIZE': 100 * 1024 * 1024,  # 100MB
-    'ALLOWED_EXTENSIONS': ['.zip', '.rar', '.7z', '.pdf', '.doc', '.docx', '.xls', '.xlsx'],
+    'MAX_FILE_SIZE': 10 * 1024 * 1024,  # 10MB（与 Django 文件上传限制保持一致）
+    'ALLOWED_EXTENSIONS': ['.zip', '.rar', '.7z', '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.jpg', '.jpeg', '.png', '.gif'],
     'FILE_STORAGE_PATH': BASE_DIR / 'storage',
 }
+
+# ===== Celery 配置 =====
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://127.0.0.1:6379/0')
+CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://127.0.0.1:6379/0')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes

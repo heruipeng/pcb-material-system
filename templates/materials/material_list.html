@@ -137,12 +137,18 @@ function doSearch() {
 function doReset() { window.location.href = '?'; }
 function generateDoc(id) {
     if (!confirm('确定要生成资料吗？')) return;
+    showLoading('正在生成...');
     fetch('/api/materials/' + id + '/generate/', {
         method: 'POST',
         headers: {'Content-Type':'application/json','X-CSRFToken':getCsrf()}
     }).then(r => r.json()).then(d => {
-        if (d.success) { alert('生成成功！任务ID：' + d.execution_id); }
-        else { alert('生成失败：' + (d.error || '未知错误')); }
+        hideLoading();
+        if (d.success) { alert('生成成功！任务ID：' + escapeHtml(d.execution_id)); }
+        else { alert('生成失败：' + escapeHtml(d.error || '未知错误')); }
+    }).catch(err => {
+        hideLoading();
+        alert('请求失败，请检查网络连接');
+        console.error(err);
     });
 }
 function getCsrf() { var m = document.cookie.match(/csrftoken=([^;]+)/); return m ? m[1] : ''; }

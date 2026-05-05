@@ -62,13 +62,21 @@ def material_list_page(request):
     if date_to:
         queryset = queryset.filter(created_at__date__lte=date_to)
     
-    # 状态统计
+    # 状态统计（使用权限过滤后的 queryset 统计）
+    from django.db.models import Count
+    status_stats = queryset.aggregate(
+        all_count=Count('id'),
+        unmade_count=Count('id', filter=Q(status='unmade')),
+        making_count=Count('id', filter=Q(status='making')),
+        completed_count=Count('id', filter=Q(status='completed')),
+        audited_count=Count('id', filter=Q(status='audited')),
+    )
     status_counts = {
-        'all': Material.objects.count(),
-        'unmade': Material.objects.filter(status='unmade').count(),
-        'making': Material.objects.filter(status='making').count(),
-        'completed': Material.objects.filter(status='completed').count(),
-        'audited': Material.objects.filter(status='audited').count(),
+        'all': status_stats['all_count'],
+        'unmade': status_stats['unmade_count'],
+        'making': status_stats['making_count'],
+        'completed': status_stats['completed_count'],
+        'audited': status_stats['audited_count'],
     }
     
     # 分页
@@ -288,6 +296,9 @@ class MaterialViewSet(viewsets.ModelViewSet):
         
         log_operation(request, 'approve', 'materials', 'Material', material.id, f'审批通过资料 {material.serial_no}')
         
+        # 自动发送通知给创建者和相关人员
+        _send_material_notification(material, 'approve', request.user)
+        
         return Response({'status': 'audited'})
     
     @action(detail=True, methods=['post'])
@@ -314,6 +325,9 @@ class MaterialViewSet(viewsets.ModelViewSet):
         
         log_operation(request, 'reject', 'materials', 'Material', material.id, f'审批驳回资料 {material.serial_no}')
         
+        # 自动发送通知
+        _send_material_notification(material, 'reject', request.user)
+        
         return Response({'status': 'rejected'})
     
     @action(detail=True, methods=['post'])
@@ -330,6 +344,9 @@ class MaterialViewSet(viewsets.ModelViewSet):
             operator=request.user,
             remark='发布资料'
         )
+        
+        # 自动发送通知
+        _send_material_notification(material, 'publish', request.user)
         
         return Response({'status': 'completed'})
     
@@ -388,3 +405,43 @@ class MaterialAttachmentViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         serializer.save(uploaded_by=self.request.user)
+
+
+# ===== 辅助函数 =====
+
+def _send_material_notification(material, action, operator):
+    """资料状态变更时自动创建通知"""
+    from core.models import Notification
+    
+    action_labels = {
+        'approve': '已审批',
+        'reject': '已驳回',
+        'publish': '已发布',
+    }
+    action_types = {
+        'approve': 'success',
+        'reject': 'error',
+        'publish': 'success',
+    }
+    
+    label = action_labels.get(action, action)
+    notif_type = action_types.get(action, 'info')
+    link = f'/materials/{material.id}/'
+    title = f'资料 {material.serial_no} {label}'
+    content = f'资料「{material.serial_no} - {material.material_no}」已被 {operator.username} {label}。'
+    
+    # 收集需要通知的用户
+    recipients = set()
+    if material.creator:
+        recipients.add(material.creator)
+    if material.maker and material.maker != material.creator:
+        recipients.add(material.maker)
+    
+    for user in recipients:
+        Notification.objects.create(
+            user=user,
+            title=title,
+            content=content,
+            notification_type=notif_type,
+            link=link,
+        )
