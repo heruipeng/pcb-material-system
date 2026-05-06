@@ -110,11 +110,12 @@ def main():
 
     # ─── 1. 产线过账 ───
     hr("第1步: 产线过账 — 创建 ProductionJob")
+    ts = datetime.now().strftime("%m%d%H%M")
 
     post_data = {
-        "job_no": "FP-2026-0506-001",
-        "serial_no": "SN20260506001",
-        "material_no": "PCB-A8X-001",
+        "job_no": f"FP-2026-{ts}",
+        "serial_no": f"SN{ts}",
+        "material_no": f"PCB-A8X-{ts}",
         "version_code": "V1.2",
         "factory": 1,
         "tool_type": "fly_probe",
@@ -136,9 +137,9 @@ def main():
     hr("第2步: 前端创建工程资料 — Material")
 
     material_data = {
-        "serial_no": "SN20260506001",
+        "serial_no": f"SN{ts}",
         "factory": 1,
-        "material_no": "PCB-A8X-001",
+        "material_no": f"PCB-A8X-{ts}",
         "version_code": "V1.2",
         "process_type": "fly_probe",
         "remark": "主控板飞针测试工单 — 产线自动过账生成",
@@ -167,7 +168,7 @@ def main():
 
     # 4a: 脚本轮询查询待处理作业
     log("轮询", "查询 pending 状态的产线作业...")
-    jobs = api("GET", f"/api/production/jobs/?status=pending&job_no=FP-2026-0506-001")
+    jobs = api("GET", f"/api/production/jobs/?status=pending&job_no={post_data['job_no']}")
     if jobs and jobs.get("results"):
         pending_job = jobs["results"][0]
         log("找到", f"作业 #{pending_job['id']} | {pending_job['job_no']} | 料号: {pending_job['material_no']}")
