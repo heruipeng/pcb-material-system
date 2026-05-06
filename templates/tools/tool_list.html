@@ -62,14 +62,11 @@
                 <th style="width:60px;">耗时</th>
                 <th style="width:100px;">失败原因</th>
                 <th style="width:70px;">状态</th>
-                <th style="width:65px;">取消</th>
-                <th style="width:80px;">重执行</th>
-                <th style="width:65px;">输出</th>
-                <th style="width:65px;">回收</th>
+                <th style="width:120px;">操作</th>
             </tr>
         </thead>
         <tbody id="executionTable">
-            <tr><td colspan="16"><div class="empty-state"><p>加载中...</p></div></td></tr>
+            <tr><td colspan="13"><div class="empty-state"><p>加载中...</p></div></td></tr>
         </tbody>
     </table>
     <div class="pagination-bar" id="execPagination"></div>
@@ -91,7 +88,6 @@ function loadExecutions() {
             var tb = document.getElementById('executionTable');
             if (d.results && d.results.length) {
                 tb.innerHTML = d.results.map(function(e) {
-                    var ops = getActionButtons(e);
                     return '<tr>'
                         + '<td>' + e.id + '</td>'
                         + '<td>' + (e.tool_name || '-') + '</td>'
@@ -105,14 +101,11 @@ function loadExecutions() {
                         + '<td>' + (e.duration ? e.duration + 's' : '-') + '</td>'
                         + '<td style="color:#F56C6C;font-size:11px;">' + (e.failure_reason || (e.error_message ? e.error_message.substring(0,20) : '-')) + '</td>'
                         + '<td><span class="tag" style="color:' + (statusColor[e.status] || '#909399') + ';font-size:11px;">' + (statusName[e.status] || e.status) + '</span></td>'
-                        + '<td>' + (ops.cancel || '') + '</td>'
-                        + '<td>' + (ops.rexec || '') + '</td>'
-                        + '<td>' + (ops.output || '') + '</td>'
-                        + '<td>' + (ops.recycle || '') + '</td>'
+                        + '<td>' + getActionButtons(e) + '</td>'
                         + '</tr>';
                 }).join('');
                 renderExecPagination(d.count);
-            } else { tb.innerHTML = '<tr><td colspan="16"><div class="empty-state"><p>暂无记录</p></div></td></tr>'; document.getElementById('execPagination').innerHTML = ''; }
+            } else { tb.innerHTML = '<tr><td colspan="13"><div class="empty-state"><p>暂无记录</p></div></td></tr>'; document.getElementById('execPagination').innerHTML = ''; }
         });
 }
 
@@ -134,18 +127,13 @@ function doSearch() { execPage = 1; loadExecutions(); }
 function doReset() { document.getElementById('searchKeyword').value=''; document.getElementById('searchType').value=''; execPage = 1; loadExecutions(); }
 
 function getActionButtons(e) {
-    var ops = {};
-    if (e.status === 'pending' || e.status === 'running') {
-        ops.cancel = '<button class="btn btn-danger btn-sm" onclick="cancelExecution(' + e.id + ')"><i class="fas fa-times"></i></button>';
-    }
-    if (e.tool) {
-        ops.rexec = '<button class="btn btn-primary btn-sm" onclick="reExecute(' + e.tool + ',' + e.material + ')"><i class="fas fa-redo"></i></button>';
-    }
-    ops.output = '<button class="btn btn-success btn-sm" onclick="viewOutputs(' + e.id + ')"><i class="fas fa-file-alt"></i></button>';
+    var btns = '<div style="display:flex;gap:4px;white-space:nowrap;">';
+    btns += '<button class="btn btn-success btn-sm" onclick="viewOutputs(' + e.id + ')"><i class="fas fa-file-alt"></i> 输出</button>';
     if (e.status !== 'recycled') {
-        ops.recycle = '<button class="btn btn-sm" style="background:#909399;color:#fff;" onclick="recycleExecution(' + e.id + ')"><i class="fas fa-recycle"></i></button>';
+        btns += '<button class="btn btn-sm" style="background:#909399;color:#fff;" onclick="recycleExecution(' + e.id + ')"><i class="fas fa-recycle"></i> 回收</button>';
     }
-    return ops;
+    btns += '</div>';
+    return btns;
 }
 
 function cancelExecution(id) {
