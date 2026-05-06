@@ -68,6 +68,7 @@ class ToolExecution(models.Model):
         ('completed', '已完成'),
         ('failed', '失败'),
         ('cancelled', '已取消'),
+        ('recycled', '已回收'),
     ]
     
     tool = models.ForeignKey(Tool, on_delete=models.CASCADE, related_name='executions', verbose_name='工具')

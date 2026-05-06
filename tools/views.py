@@ -104,6 +104,16 @@ class ToolExecutionViewSet(viewsets.ReadOnlyModelViewSet):
         execution.save()
         return Response({'status': 'cancelled'})
 
+    @action(detail=True, methods=['post'])
+    def recycle(self, request, pk=None):
+        """回收执行记录"""
+        execution = self.get_object()
+        if execution.status == 'recycled':
+            return Response({'error': '已回收，无需重复操作'}, status=status.HTTP_400_BAD_REQUEST)
+        execution.status = 'recycled'
+        execution.save()
+        return Response({'status': 'recycled'})
+
     @action(detail=True, methods=['get'])
     def outputs(self, request, pk=None):
         """获取执行输出"""

@@ -70,8 +70,8 @@
 </div>
 
 <script>
-var statusColor = {pending:'#E6A23C', running:'#409EFF', completed:'#67C23A', failed:'#F56C6C'};
-var statusName = {pending:'等待中', running:'执行中', completed:'已完成', failed:'失败', cancelled:'已取消'};
+var statusColor = {pending:'#E6A23C', running:'#409EFF', completed:'#67C23A', failed:'#F56C6C', cancelled:'#909399', recycled:'#C0C4CC'};
+var statusName = {pending:'等待中', running:'执行中', completed:'已完成', failed:'失败', cancelled:'已取消', recycled:'已回收'};
 function loadExecutions() {
     var kw = document.getElementById('searchKeyword').value.trim();
     var tp = document.getElementById('searchType').value;
@@ -111,7 +111,12 @@ function getActionButtons(e) {
     if (e.tool) {
         btns += '<button class="btn btn-primary btn-sm" onclick="reExecute(' + e.tool + ',' + e.material + ')" title="重新执行"><i class="fas fa-redo"></i> 重执行</button> ';
     }
-    btns += '<a href="javascript:void(0)" class="link-btn" onclick="viewOutputs(' + e.id + ')">输出</a>';
+    btns += '<button class="btn btn-default btn-sm" onclick="viewOutputs(' + e.id + ')" title="查看输出"><i class="fas fa-file-alt"></i> 输出</button> ';
+    if (e.status !== 'recycled') {
+        btns += '<button class="btn btn-default btn-sm" onclick="recycleExecution(' + e.id + ')" title="回收"><i class="fas fa-recycle"></i> 回收</button>';
+    }
+    return btns;
+}
     return btns;
 }
 
@@ -125,6 +130,23 @@ function cancelExecution(id) {
         hideLoading();
         if (d.status) { loadExecutions(); }
         else { alert('取消失败'); }
+    }).catch(function(err) {
+        hideLoading();
+        alert('请求失败');
+        console.error(err);
+    });
+}
+
+function recycleExecution(id) {
+    if (!confirm('确定回收此执行记录？')) return;
+    showLoading('回收中...');
+    fetch('/api/tools/executions/' + id + '/recycle/', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrf()}
+    }).then(r => r.json()).then(d => {
+        hideLoading();
+        if (d.status) { loadExecutions(); }
+        else { alert('回收失败：' + (d.error || '未知错误')); }
     }).catch(function(err) {
         hideLoading();
         alert('请求失败');
