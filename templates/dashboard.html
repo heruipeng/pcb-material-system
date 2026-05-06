@@ -1,88 +1,150 @@
 {% extends 'base.html' %}
 {% block title %}首页 - 工程资料管理系统 V2.0{% endblock %}
 
+{% block extra_css %}
+.dash-stat { flex:1; min-width:170px; text-align:center; padding:24px 16px; border-radius:8px; transition:all 0.2s; }
+.dash-stat:hover { transform: translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,0.08); }
+.dash-stat .icon { font-size:28px; margin-bottom:8px; }
+.dash-stat .num { font-size:30px; font-weight:700; line-height:1.2; }
+.dash-stat .label { font-size:12px; margin-top:4px; }
+.dash-panel { display:flex; gap:16px; flex-wrap:wrap; }
+.dash-panel > .table-card { flex:1; min-width:480px; }
+{% endblock %}
+
 {% block content %}
 <!-- 统计卡片 -->
-<div class="filter-card" style="display:flex;gap:20px;flex-wrap:wrap;">
-    <div style="flex:1;min-width:180px;text-align:center;padding:20px;border-right:1px solid #EBEEF5;">
-        <div style="font-size:32px;font-weight:700;color:#409EFF;" id="totalCount">-</div>
-        <div style="color:#909399;font-size:13px;margin-top:4px;">资料总数</div>
+<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+    <div class="filter-card dash-stat" style="background:linear-gradient(135deg,#ecf5ff,#fff);">
+        <div class="icon">📋</div>
+        <div class="num" style="color:#409EFF;" id="totalCount">-</div>
+        <div class="label" style="color:#909399;">资料总数</div>
     </div>
-    <div style="flex:1;min-width:180px;text-align:center;padding:20px;border-right:1px solid #EBEEF5;">
-        <div style="font-size:32px;font-weight:700;color:#67C23A;" id="completedCount">-</div>
-        <div style="color:#909399;font-size:13px;margin-top:4px;">已完成</div>
+    <div class="filter-card dash-stat" style="background:linear-gradient(135deg,#f0f9eb,#fff);">
+        <div class="icon">✅</div>
+        <div class="num" style="color:#67C23A;" id="completedCount">-</div>
+        <div class="label" style="color:#909399;">已完成</div>
     </div>
-    <div style="flex:1;min-width:180px;text-align:center;padding:20px;border-right:1px solid #EBEEF5;">
-        <div style="font-size:32px;font-weight:700;color:#E6A23C;" id="unmadeCount">-</div>
-        <div style="color:#909399;font-size:13px;margin-top:4px;">未制作</div>
+    <div class="filter-card dash-stat" style="background:linear-gradient(135deg,#fdf6ec,#fff);">
+        <div class="icon">🔧</div>
+        <div class="num" style="color:#E6A23C;" id="makingCount">-</div>
+        <div class="label" style="color:#909399;">制作中</div>
     </div>
-    <div style="flex:1;min-width:180px;text-align:center;padding:20px;border-right:1px solid #EBEEF5;">
-        <div style="font-size:32px;font-weight:700;color:#909399;" id="todayCount">-</div>
-        <div style="color:#909399;font-size:13px;margin-top:4px;">今日新增</div>
+    <div class="filter-card dash-stat" style="background:linear-gradient(135deg,#f4f4f5,#fff);">
+        <div class="icon">📅</div>
+        <div class="num" style="color:#909399;" id="todayCount">-</div>
+        <div class="label" style="color:#909399;">今日新增</div>
     </div>
-    <div style="flex:1;min-width:180px;text-align:center;padding:20px;">
-        <div style="font-size:32px;font-weight:700;color:#409EFF;" id="toolCount">-</div>
-        <div style="color:#909399;font-size:13px;margin-top:4px;">工具管理</div>
+    <div class="filter-card dash-stat" style="background:linear-gradient(135deg,#ecf5ff,#fff);">
+        <div class="icon">⚙️</div>
+        <div class="num" style="color:#409EFF;" id="toolExeCount">-</div>
+        <div class="label" style="color:#909399;">工具执行数</div>
     </div>
 </div>
 
 <!-- 快捷入口 -->
-<div class="filter-card" style="display:flex;gap:12px;">
-    <a href="/materials/" class="btn btn-primary"><i class="fas fa-list"></i> 资料总纲</a>
+<div class="filter-card" style="display:flex;gap:12px;align-items:center;">
+    <span style="font-weight:600;color:#303133;margin-right:8px;">快捷入口</span>
+    <a href="/materials/" class="btn btn-primary"><i class="fas fa-folder-open"></i> 资料总纲</a>
     <a href="/tools/" class="btn btn-success"><i class="fas fa-tools"></i> 工具管理</a>
     <a href="/reports/" class="btn btn-default"><i class="fas fa-chart-bar"></i> 报表管理</a>
 </div>
 
-<!-- 最近资料 -->
-<div class="table-card">
-    <div style="padding:14px 16px;font-weight:600;font-size:15px;border-bottom:1px solid #EBEEF5;">
-        <i class="fas fa-clock" style="color:#409EFF;"></i> 最近资料
+<!-- 双栏布局 -->
+<div class="dash-panel">
+    <!-- 最近资料 -->
+    <div class="table-card">
+        <div style="padding:14px 16px;font-weight:600;font-size:15px;border-bottom:1px solid #EBEEF5;display:flex;justify-content:space-between;align-items:center;">
+            <span><i class="fas fa-clock" style="color:#409EFF;"></i> 最近资料</span>
+            <a href="/materials/" style="font-size:12px;color:#409EFF;text-decoration:none;">全部 →</a>
+        </div>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>流水ID</th><th>料号</th><th>版本</th><th>创建时间</th><th>状态</th>
+                </tr>
+            </thead>
+            <tbody id="recentTable">
+                <tr><td colspan="5"><div class="empty-state"><p>加载中...</p></div></td></tr>
+            </tbody>
+        </table>
     </div>
-    <table class="table">
-        <thead>
-            <tr>
-                <th>序号</th><th>流水ID</th><th>厂区ID</th><th>料号</th>
-                <th>版本编码</th><th>REMARK</th><th>创建时间</th><th>制作人</th><th>状态</th>
-            </tr>
-        </thead>
-        <tbody id="recentTable">
-            <tr><td colspan="9"><div class="empty-state"><p>加载中...</p></div></td></tr>
-        </tbody>
-    </table>
+
+    <!-- 最近工具执行 -->
+    <div class="table-card">
+        <div style="padding:14px 16px;font-weight:600;font-size:15px;border-bottom:1px solid #EBEEF5;display:flex;justify-content:space-between;align-items:center;">
+            <span><i class="fas fa-play-circle" style="color:#67C23A;"></i> 最近工具执行</span>
+            <a href="/tools/" style="font-size:12px;color:#409EFF;text-decoration:none;">全部 →</a>
+        </div>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>工具</th><th>料号</th><th>执行人</th><th>创建时间</th><th>状态</th>
+                </tr>
+            </thead>
+            <tbody id="recentToolsTable">
+                <tr><td colspan="5"><div class="empty-state"><p>加载中...</p></div></td></tr>
+            </tbody>
+        </table>
+    </div>
 </div>
 
 <script>
+// 统计数据
 fetch('/api/core/dashboard-stats/')
     .then(r => r.json())
     .then(d => {
         document.getElementById('totalCount').textContent = d.material_stats?.total || 0;
         document.getElementById('completedCount').textContent = d.material_stats?.completed || 0;
-        document.getElementById('unmadeCount').textContent = d.material_stats?.unmade || 0;
+        document.getElementById('makingCount').textContent = d.material_stats?.making || 0;
         document.getElementById('todayCount').textContent = d.material_stats?.today || 0;
-        document.getElementById('toolCount').textContent = d.tool_stats?.total || 0;
-    });
+        document.getElementById('toolExeCount').textContent = d.tool_stats?.total || 0;
+    })
+    .catch(() => {});
 
+// 最近资料
 fetch('/api/materials/?page_size=6&ordering=-created_at')
-    .then(r => r.json())
-    .then(d => {
-        const tbody = document.getElementById('recentTable');
+    .then(r => r.json()).then(d => {
+        const tb = document.getElementById('recentTable');
         if (d.results?.length) {
-            tbody.innerHTML = d.results.map((m, i) => `
+            tb.innerHTML = d.results.map(m => `
                 <tr>
-                    <td>${i + 1}</td>
-                    <td>${m.serial_no}</td>
-                    <td>${m.factory_name || m.factory || '-'}</td>
+                    <td><strong>${m.serial_no}</strong></td>
                     <td>${m.material_no}</td>
                     <td>${m.version_code}</td>
-                    <td>${m.remark || 'None'}</td>
                     <td>${new Date(m.created_at).toLocaleString('zh-CN')}</td>
-                    <td>${m.maker_name || m.creator_name || 'None'}</td>
                     <td><span class="tag tag-${m.status_display}">${m.status_display}</span></td>
                 </tr>
             `).join('');
         } else {
-            tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><i class="fas fa-inbox"></i><p>暂无数据</p></div></td></tr>';
+            tb.innerHTML = '<tr><td colspan="5"><div class="empty-state"><i class="fas fa-inbox"></i><p>暂无资料</p></div></td></tr>';
         }
+    })
+    .catch(() => {
+        document.getElementById('recentTable').innerHTML = '<tr><td colspan="5"><div class="empty-state"><p>加载失败</p></div></td></tr>';
+    });
+
+// 最近工具执行
+var exeStatusName = {pending:'等待中', running:'执行中', completed:'已完成', failed:'失败', cancelled:'已取消', recycled:'已回收'};
+var exeStatusColor = {pending:'#E6A23C', running:'#409EFF', completed:'#67C23A', failed:'#F56C6C', cancelled:'#909399', recycled:'#C0C4CC'};
+fetch('/api/tools/executions/?page_size=6&ordering=-created_at')
+    .then(r => r.json()).then(d => {
+        const tb = document.getElementById('recentToolsTable');
+        if (d.results?.length) {
+            tb.innerHTML = d.results.map(e => `
+                <tr>
+                    <td>${e.tool_name || '-'}</td>
+                    <td>${e.material_no || e.material_serial_no || '-'}</td>
+                    <td>${e.executor_name || '-'}</td>
+                    <td>${new Date(e.created_at).toLocaleString('zh-CN')}</td>
+                    <td><span class="tag" style="color:${exeStatusColor[e.status] || '#909399'}">${exeStatusName[e.status] || e.status}</span></td>
+                </tr>
+            `).join('');
+        } else {
+            tb.innerHTML = '<tr><td colspan="5"><div class="empty-state"><i class="fas fa-inbox"></i><p>暂无执行记录</p></div></td></tr>';
+        }
+    })
+    .catch(() => {
+        document.getElementById('recentToolsTable').innerHTML = '<tr><td colspan="5"><div class="empty-state"><p>加载失败</p></div></td></tr>';
     });
 </script>
 {% endblock %}
