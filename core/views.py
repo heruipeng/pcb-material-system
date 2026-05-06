@@ -297,19 +297,11 @@ class CustomLoginView(LoginView):
             try:
                 user = User.objects.get(username=username)
                 if not user.is_active:
-                    form._errors.clear()
-                    form.add_error(None, '该账号已被停用，请联系管理员')
-                    return self.render_to_response(self.get_context_data(form=form))
-                elif not user.check_password(form.data.get('password', '')):
-                    form._errors.clear()
-                    form.add_error(None, '密码错误，请重新输入')
+                    form.add_error(None, '用户名或密码错误，请重新输入')
                     return self.render_to_response(self.get_context_data(form=form))
             except User.DoesNotExist:
-                form._errors.clear()
-                form.add_error(None, '用户名不存在')
-                return self.render_to_response(self.get_context_data(form=form))
-        form._errors.clear()
-        form.add_error(None, '用户名或密码错误')
+                pass
+        form.add_error(None, '用户名或密码错误，请重新输入')
         return self.render_to_response(self.get_context_data(form=form))
 
 

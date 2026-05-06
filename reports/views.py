@@ -92,7 +92,8 @@ class ReportViewSet(viewsets.ModelViewSet):
         media_root = settings.MEDIA_ROOT
         report_dir = os.path.join(media_root, 'reports')
         os.makedirs(report_dir, exist_ok=True)
-        filename = f"{report.code}_{timezone.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        safe_code = report.code.replace('/', '_').replace('\\', '_').replace('..', '_')
+        filename = f"{safe_code}_{timezone.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
         filepath = os.path.join(report_dir, filename)
         wb.save(filepath)
 
