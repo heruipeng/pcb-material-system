@@ -60,7 +60,7 @@
                 <th style="width:80px;">耗时</th>
                 <th style="width:120px;">失败原因</th>
                 <th style="width:90px;">状态</th>
-                <th style="width:120px;">操作</th>
+                <th style="width:200px;">操作</th>
             </tr>
         </thead>
         <tbody id="executionTable">
@@ -123,17 +123,18 @@ function doSearch() { execPage = 1; loadExecutions(); }
 function doReset() { document.getElementById('searchKeyword').value=''; document.getElementById('searchType').value=''; execPage = 1; loadExecutions(); }
 
 function getActionButtons(e) {
-    var btns = '';
+    var btns = '<div style="display:flex;gap:4px;flex-wrap:nowrap;white-space:nowrap;">';
     if (e.status === 'pending' || e.status === 'running') {
-        btns += '<button class="btn btn-danger btn-sm" onclick="cancelExecution(' + e.id + ')" title="取消"><i class="fas fa-times"></i> 取消</button> ';
+        btns += '<button class="btn btn-danger btn-sm" onclick="cancelExecution(' + e.id + ')" title="取消"><i class="fas fa-times"></i> 取消</button>';
     }
     if (e.tool) {
-        btns += '<button class="btn btn-primary btn-sm" onclick="reExecute(' + e.tool + ',' + e.material + ')" title="重新执行"><i class="fas fa-redo"></i> 重执行</button> ';
+        btns += '<button class="btn btn-primary btn-sm" onclick="reExecute(' + e.tool + ',' + e.material + ')" title="重新执行"><i class="fas fa-redo"></i> 重执行</button>';
     }
-    btns += '<button class="btn btn-default btn-sm" onclick="viewOutputs(' + e.id + ')" title="查看输出"><i class="fas fa-file-alt"></i> 输出</button> ';
+    btns += '<button class="btn btn-success btn-sm" onclick="viewOutputs(' + e.id + ')" title="查看输出"><i class="fas fa-file-alt"></i> 输出</button>';
     if (e.status !== 'recycled') {
-        btns += '<button class="btn btn-default btn-sm" onclick="recycleExecution(' + e.id + ')" title="回收"><i class="fas fa-recycle"></i> 回收</button>';
+        btns += '<button class="btn btn-sm" style="background:#909399;color:#fff;" onclick="recycleExecution(' + e.id + ')" title="回收"><i class="fas fa-recycle"></i> 回收</button>';
     }
+    btns += '</div>';
     return btns;
 }
 
