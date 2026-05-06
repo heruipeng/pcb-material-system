@@ -1,6 +1,20 @@
 {% extends 'base.html' %}
 {% block title %}工具管理{% endblock %}
 
+{% block extra_css %}
+.tool-stat { flex:1; min-width:140px; text-align:center; padding:18px 12px; border-radius:8px; }
+.tool-stat .num { font-size:26px; font-weight:700; }
+.tool-stat .label { font-size:12px; color:#909399; margin-top:4px; }
+.tool-card { background:var(--white); border:1px solid var(--border); border-radius:8px; padding:16px 12px; text-align:center; cursor:pointer; transition:all 0.2s; position:relative; }
+.tool-card:hover { box-shadow:0 4px 12px rgba(64,158,255,0.12); border-color:var(--primary); transform:translateY(-2px); }
+.tool-card .active-dot { position:absolute; top:8px; right:8px; width:8px; height:8px; border-radius:50%; }
+.tool-card .active-dot.on { background:#67C23A; box-shadow:0 0 6px rgba(103,194,58,0.5); }
+.tool-card .active-dot.off { background:#C0C4CC; }
+@media (max-width:768px) {
+    .tool-stat { min-width:100px; padding:12px 8px; }
+    .tool-stat .num { font-size:20px; }
+}
+{% endblock %}
 {% block content %}
 <div class="filter-card">
     <div class="filter-row">
@@ -26,16 +40,40 @@
     </div>
 </div>
 
-<div class="filter-card" style="display:flex;flex-wrap:wrap;gap:16px;">
+<!-- 统计概览 -->
+<div class="filter-card" style="display:flex;gap:12px;flex-wrap:wrap;">
+    <div class="tool-stat" style="background:linear-gradient(135deg,#ecf5ff,#fff);">
+        <div class="num" style="color:#409EFF;" id="statToolTotal">-</div>
+        <div class="label">工具总数</div>
+    </div>
+    <div class="tool-stat" style="background:linear-gradient(135deg,#f0f9eb,#fff);">
+        <div class="num" style="color:#67C23A;" id="statExeTotal">-</div>
+        <div class="label">执行总数</div>
+    </div>
+    <div class="tool-stat" style="background:linear-gradient(135deg,#fdf6ec,#fff);">
+        <div class="num" style="color:#E6A23C;" id="statExeToday">-</div>
+        <div class="label">今日执行</div>
+    </div>
+    <div class="tool-stat" style="background:linear-gradient(135deg,#f0f9eb,#fff);">
+        <div class="num" style="color:#67C23A;" id="statSuccessRate">-</div>
+        <div class="label">成功率</div>
+    </div>
+    <div class="tool-stat" style="background:linear-gradient(135deg,#fef0f0,#fff);">
+        <div class="num" style="color:#F56C6C;" id="statFailed">-</div>
+        <div class="label">失败数</div>
+    </div>
+</div>
+
+<!-- 工具卡片 -->
+<div class="filter-card" style="display:flex;flex-wrap:wrap;gap:12px;">
     {% for tool in tools %}
-    <a href="/tools/{{ tool.id }}/" style="flex:1;min-width:160px;text-decoration:none;color:inherit;">
-        <div style="background:#fff;border:1px solid #EBEEF5;border-radius:8px;padding:20px 16px;text-align:center;transition:all 0.2s;cursor:pointer;"
-             onmouseover="this.style.boxShadow='0 4px 12px rgba(64,158,255,0.15)';this.style.borderColor='#409EFF'"
-             onmouseout="this.style.boxShadow='none';this.style.borderColor='#EBEEF5'">
-            <i class="{{ tool.icon }} fa-2x" style="color:{{ tool.color }};margin-bottom:10px;display:block;"></i>
-            <div style="font-weight:600;font-size:15px;margin-bottom:4px;">{{ tool.name }}</div>
-            <div style="font-size:12px;color:#909399;">{{ tool.desc }}</div>
-            <div style="margin-top:10px;">
+    <a href="/tools/{{ tool.id }}/" style="flex:1;min-width:150px;text-decoration:none;color:inherit;">
+        <div class="tool-card">
+            <span class="active-dot {% if tool.count > 0 %}on{% else %}off{% endif %}"></span>
+            <i class="{{ tool.icon }} fa-2x" style="color:{{ tool.color }};margin-bottom:8px;display:block;"></i>
+            <div style="font-weight:600;font-size:14px;margin-bottom:4px;">{{ tool.name }}</div>
+            <div style="font-size:11px;color:#909399;">{{ tool.desc|default:"暂无描述" }}</div>
+            <div style="margin-top:8px;">
                 <span class="tag" style="font-size:11px;color:#67C23A;background:#f0f9eb;border:1px solid #e1f3d8;">{{ tool.count }} 次执行</span>
             </div>
         </div>
@@ -229,6 +267,19 @@ function viewOutputs(id) {
 }
 
 function getCsrf() { var m = document.cookie.match(/csrftoken=([^;]+)/); return m ? m[1] : ''; }
+
+// 加载统计概览
+fetch('/api/core/dashboard-stats/')
+    .then(r => r.json()).then(d => {
+        var ts = d.tool_stats || {};
+        document.getElementById('statToolTotal').textContent = {{ tools|length }};
+        document.getElementById('statExeTotal').textContent = ts.total || 0;
+        document.getElementById('statExeToday').textContent = ts.today || 0;
+        var rate = ts.total > 0 ? Math.round(ts.completed / ts.total * 100) : 0;
+        document.getElementById('statSuccessRate').textContent = rate + '%';
+        document.getElementById('statFailed').textContent = ts.failed || 0;
+    }).catch(function() {});
+
 loadExecutions();
 </script>
 {% endblock %}
