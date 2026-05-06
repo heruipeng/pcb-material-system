@@ -51,7 +51,8 @@
         <thead>
             <tr>
                 <th style="width:50px;">ID</th>
-                <th style="width:100px;">工具</th>
+                <th style="width:100px;">工具类型</th>
+                <th style="width:120px;">创建时间</th>
                 <th style="width:140px;">料号</th>
                 <th style="width:60px;">版本</th>
                 <th style="width:130px;">输出文件</th>
@@ -68,7 +69,7 @@
             </tr>
         </thead>
         <tbody id="executionTable">
-            <tr><td colspan="15"><div class="empty-state"><p>加载中...</p></div></td></tr>
+            <tr><td colspan="16"><div class="empty-state"><p>加载中...</p></div></td></tr>
         </tbody>
     </table>
     <div class="pagination-bar" id="execPagination"></div>
@@ -94,6 +95,7 @@ function loadExecutions() {
                     return '<tr>'
                         + '<td>' + e.id + '</td>'
                         + '<td>' + (e.tool_name || '-') + '</td>'
+                        + '<td>' + (e.created_at ? new Date(e.created_at).toLocaleString('zh-CN') : '-') + '</td>'
                         + '<td>' + (e.material_no || '-') + '</td>'
                         + '<td>' + (e.material_version || '-') + '</td>'
                         + '<td style="font-size:11px;">' + ((e.output_files && e.output_files.length) ? e.output_files.join('<br>') : '-') + '</td>'
@@ -111,7 +113,7 @@ function loadExecutions() {
                 }).join('');
                 }).join('');
                 renderExecPagination(d.count);
-            } else { tb.innerHTML = '<tr><td colspan="15"><div class="empty-state"><p>暂无记录</p></div></td></tr>'; document.getElementById('execPagination').innerHTML = ''; }
+            } else { tb.innerHTML = '<tr><td colspan="16"><div class="empty-state"><p>暂无记录</p></div></td></tr>'; document.getElementById('execPagination').innerHTML = ''; }
         });
 }
 
