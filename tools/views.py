@@ -31,8 +31,19 @@ class ToolViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['tool_type', 'category', 'is_active']
     search_fields = ['name', 'code', 'description']
-    ordering_fields = ['created_at', 'name', 'sort_order']
+    ordering_fields = ['created_at', 'name', 'sort_order', 'started_at', 'completed_at']
     ordering = ['sort_order', 'id']
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        control = self.request.query_params.get('control', '')
+        if control == 'idle':
+            qs = qs.filter(started_at__isnull=True, completed_at__isnull=True)
+        elif control == 'making':
+            qs = qs.filter(started_at__isnull=False, completed_at__isnull=True)
+        elif control == 'done':
+            qs = qs.filter(completed_at__isnull=False)
+        return qs
 
     @action(detail=True, methods=['post'])
     def execute(self, request, pk=None):
@@ -83,6 +94,35 @@ class ToolViewSet(viewsets.ModelViewSet):
         templates = tool.templates.all()
         serializer = ToolTemplateSerializer(templates, many=True)
         return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def start(self, request, pk=None):
+        """开始制作 - 记录制作时间"""
+        tool = self.get_object()
+        if tool.started_at:
+            return Response({'error': '工具已开始制作', 'started_at': tool.started_at},
+                          status=status.HTTP_400_BAD_REQUEST)
+        tool.started_at = timezone.now()
+        tool.save()
+        log_operation(request, 'update', 'tools', 'Tool', tool.id,
+                     f'开始制作工具 {tool.name}')
+        return Response({'success': True, 'started_at': tool.started_at})
+
+    @action(detail=True, methods=['post'])
+    def complete(self, request, pk=None):
+        """完成制作 - 记录完成时间"""
+        tool = self.get_object()
+        if not tool.started_at:
+            return Response({'error': '工具尚未开始制作，请先开始'},
+                          status=status.HTTP_400_BAD_REQUEST)
+        if tool.completed_at:
+            return Response({'error': '工具已完成制作', 'completed_at': tool.completed_at},
+                          status=status.HTTP_400_BAD_REQUEST)
+        tool.completed_at = timezone.now()
+        tool.save()
+        log_operation(request, 'update', 'tools', 'Tool', tool.id,
+                     f'完成制作工具 {tool.name}')
+        return Response({'success': True, 'completed_at': tool.completed_at})
 
 
 class ToolExecutionViewSet(viewsets.ReadOnlyModelViewSet):

@@ -1,12 +1,12 @@
 {% extends 'base.html' %}
-{% block title %}工具输出{% endblock %}
+{% block title %}工具管理{% endblock %}
 
 {% block content %}
 <div class="filter-card">
     <div class="filter-row">
         <div class="filter-item">
             <label>关键字：</label>
-            <input type="text" id="searchKeyword" placeholder="工具名称" style="width:200px;">
+            <input type="text" id="searchKeyword" placeholder="工具名称 / 代码" style="width:200px;">
         </div>
         <div class="filter-item">
             <label>类型：</label>
@@ -16,33 +16,54 @@
                 <option value="impedance">阻抗测试</option>
                 <option value="aoi">AOI检测</option>
                 <option value="xray">X-Ray检测</option>
+                <option value="ict">ICT测试</option>
+                <option value="functional">功能测试</option>
+                <option value="other">其他</option>
+            </select>
+        </div>
+        <div class="filter-item">
+            <label>管控状态：</label>
+            <select id="searchControl" style="width:130px;">
+                <option value="">全部</option>
+                <option value="idle">未开始</option>
+                <option value="making">制作中</option>
+                <option value="done">已完成</option>
             </select>
         </div>
         <button class="btn btn-primary" onclick="doSearch()">查询</button>
         <button class="btn btn-default" onclick="doReset()">重置</button>
+        <button class="btn btn-success" onclick="doCreate()"><i class="fas fa-plus"></i> 新增工具</button>
     </div>
 </div>
 
-<div class="filter-card" style="display:flex;flex-wrap:wrap;gap:16px;">
-    {% for tool in tools %}
-    <a href="/tools/{{ tool.id }}/" style="flex:1;min-width:160px;text-decoration:none;color:inherit;">
-        <div style="background:#fff;border:1px solid #EBEEF5;border-radius:8px;padding:20px 16px;text-align:center;transition:all 0.2s;cursor:pointer;"
-             onmouseover="this.style.boxShadow='0 4px 12px rgba(64,158,255,0.15)';this.style.borderColor='#409EFF'"
-             onmouseout="this.style.boxShadow='none';this.style.borderColor='#EBEEF5'">
-            <i class="{{ tool.icon }} fa-2x" style="color:{{ tool.color }};margin-bottom:10px;display:block;"></i>
-            <div style="font-weight:600;font-size:15px;margin-bottom:4px;">{{ tool.name }}</div>
-            <div style="font-size:12px;color:#909399;">{{ tool.desc }}</div>
-            <div style="margin-top:10px;">
-                <span class="tag" style="font-size:11px;color:#67C23A;background:#f0f9eb;border:1px solid #e1f3d8;">{{ tool.count }} 次执行</span>
-            </div>
-        </div>
-    </a>
-    {% empty %}
-    <div style="width:100%;text-align:center;padding:40px;color:#909399;">暂无工具</div>
-    {% endfor %}
+<div class="table-card">
+    <table class="table">
+        <thead>
+            <tr>
+                <th style="width:60px;">ID</th>
+                <th style="width:140px;">工具名称</th>
+                <th style="width:100px;">工具代码</th>
+                <th style="width:100px;">类型</th>
+                <th style="width:80px;">版本</th>
+                <th style="width:130px;">创建时间</th>
+                <th style="width:130px;">制作时间</th>
+                <th style="width:130px;">完成时间</th>
+                <th style="width:80px;">状态</th>
+                <th style="width:200px;">工具管控</th>
+            </tr>
+        </thead>
+        <tbody id="toolTable">
+            <tr><td colspan="10"><div class="empty-state"><p>加载中...</p></div></td></tr>
+        </tbody>
+    </table>
+    <div class="pagination-bar">
+        <div id="pageInfo">共 <strong>0</strong> 条</div>
+        <div class="pagination" id="paginationBar"></div>
+    </div>
 </div>
 
-<div class="table-card">
+<!-- 执行记录 -->
+<div class="table-card" style="margin-top:16px;">
     <div style="padding:14px 16px;font-weight:600;font-size:15px;border-bottom:1px solid #EBEEF5;">执行记录</div>
     <table class="table">
         <thead>
@@ -64,27 +85,244 @@
     </table>
 </div>
 
+<!-- 新增工具弹窗 -->
+<div id="createModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.3);z-index:9999;align-items:center;justify-content:center;">
+    <div style="background:#fff;border-radius:8px;width:500px;padding:24px;box-shadow:0 4px 16px rgba(0,0,0,0.15);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <h3 style="margin:0;">新增工具</h3>
+            <button onclick="closeCreate()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#909399;">&times;</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+            <div class="filter-item"><label>工具名称</label><input type="text" id="newName" style="width:100%;"></div>
+            <div class="filter-item"><label>工具代码</label><input type="text" id="newCode" style="width:100%;"></div>
+            <div class="filter-item">
+                <label>工具类型</label>
+                <select id="newType" style="width:100%;">
+                    <option value="fly_probe">飞针测试</option>
+                    <option value="impedance">阻抗测试</option>
+                    <option value="aoi">AOI检测</option>
+                    <option value="xray">X-Ray检测</option>
+                    <option value="ict">ICT测试</option>
+                    <option value="functional">功能测试</option>
+                    <option value="other">其他</option>
+                </select>
+            </div>
+            <div class="filter-item"><label>版本</label><input type="text" id="newVersion" value="1.0" style="width:100%;"></div>
+            <div class="filter-item"><label>描述</label><textarea id="newDesc" rows="2" style="width:100%;border:1px solid #DCDFE6;border-radius:4px;padding:8px;font-size:13px;"></textarea></div>
+        </div>
+        <div style="margin-top:20px;text-align:right;display:flex;gap:8px;justify-content:flex-end;">
+            <button class="btn btn-default" onclick="closeCreate()">取消</button>
+            <button class="btn btn-primary" onclick="submitCreate()">确定</button>
+        </div>
+    </div>
+</div>
+
 <script>
+var currentPage = 1, pageSize = 10;
 var statusColor = {pending:'#E6A23C', running:'#409EFF', completed:'#67C23A', failed:'#F56C6C'};
 var statusName = {pending:'等待中', running:'执行中', completed:'已完成', failed:'失败', cancelled:'已取消'};
+
+function loadTools() {
+    var kw = document.getElementById('searchKeyword').value.trim();
+    var tp = document.getElementById('searchType').value;
+    var ct = document.getElementById('searchControl').value;
+    var url = '/api/tools/?page_size=' + pageSize + '&page=' + currentPage;
+    if(tp) url += '&tool_type=' + tp;
+    if(kw) url += '&search=' + kw;
+    if(ct) url += '&control=' + ct;
+    
+    fetch(url).then(r => r.json()).then(function(d) {
+        var tb = document.getElementById('toolTable');
+        if (d.results && d.results.length) {
+            tb.innerHTML = d.results.map(function(t) {
+                var ctrlHtml = getControlButtons(t);
+                var ts = t.started_at ? new Date(t.started_at).toLocaleString('zh-CN') : '-';
+                var tc = t.completed_at ? new Date(t.completed_at).toLocaleString('zh-CN') : '-';
+                var statusHtml = '';
+                if (t.completed_at) {
+                    statusHtml = '<span class="tag tag-已完成">已完成</span>';
+                } else if (t.started_at) {
+                    statusHtml = '<span class="tag tag-制作中">制作中</span>';
+                } else {
+                    statusHtml = '<span class="tag tag-未制作">未开始</span>';
+                }
+                return '<tr>'
+                    + '<td>' + t.id + '</td>'
+                    + '<td><strong>' + escapeHtml(t.name) + '</strong></td>'
+                    + '<td>' + escapeHtml(t.code) + '</td>'
+                    + '<td>' + escapeHtml(t.tool_type_display) + '</td>'
+                    + '<td>' + escapeHtml(t.version) + '</td>'
+                    + '<td>' + new Date(t.created_at).toLocaleString('zh-CN') + '</td>'
+                    + '<td>' + ts + '</td>'
+                    + '<td>' + tc + '</td>'
+                    + '<td>' + statusHtml + '</td>'
+                    + '<td>' + ctrlHtml + '</td>'
+                    + '</tr>';
+            }).join('');
+            document.getElementById('pageInfo').innerHTML = '共 <strong>' + d.count + '</strong> 条';
+            renderPagination(d.count);
+        } else {
+            tb.innerHTML = '<tr><td colspan="10"><div class="empty-state"><p>暂无工具</p></div></td></tr>';
+            document.getElementById('pageInfo').innerHTML = '共 <strong>0</strong> 条';
+            document.getElementById('paginationBar').innerHTML = '';
+        }
+    }).catch(function(err) {
+        console.error(err);
+        document.getElementById('toolTable').innerHTML = '<tr><td colspan="10"><div class="empty-state"><p>加载失败：' + err.message + '</p></div></td></tr>';
+    });
+}
+
+function getControlButtons(t) {
+    var btns = '';
+    if (!t.started_at) {
+        btns += '<button class="btn btn-success btn-sm" onclick="startTool(' + t.id + ')" title="开始制作"><i class="fas fa-play"></i> 开始制作</button> ';
+    }
+    if (t.started_at && !t.completed_at) {
+        btns += '<button class="btn btn-primary btn-sm" onclick="completeTool(' + t.id + ')" title="完成制作"><i class="fas fa-check"></i> 完成制作</button> ';
+    }
+    btns += '<a href="/tools/' + t.id + '/" class="btn btn-default btn-sm"><i class="fas fa-eye"></i> 详情</a> ';
+    btns += '<button class="btn btn-default btn-sm" onclick="executeTool(' + t.id + ')" title="执行工具"><i class="fas fa-cog"></i> 执行</button>';
+    return btns;
+}
+
+function renderPagination(total) {
+    var bar = document.getElementById('paginationBar');
+    var totalPages = Math.ceil(total / pageSize);
+    if (totalPages <= 1) { bar.innerHTML = ''; return; }
+    var html = '';
+    if (currentPage > 1) {
+        html += '<button class="page-btn" onclick="goPage(' + (currentPage - 1) + ')">上一页</button>';
+    }
+    html += '<span class="page-btn active">' + currentPage + ' / ' + totalPages + '</span>';
+    if (currentPage < totalPages) {
+        html += '<button class="page-btn" onclick="goPage(' + (currentPage + 1) + ')">下一页</button>';
+    }
+    bar.innerHTML = html;
+}
+
+function goPage(p) { currentPage = p; loadTools(); }
+
+function startTool(id) {
+    if (!confirm('确认开始制作此工具？')) return;
+    showLoading('开始制作...');
+    fetch('/api/tools/' + id + '/start/', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrf()}
+    }).then(r => r.json()).then(d => {
+        hideLoading();
+        if (d.success) { alert('已开始制作！'); loadTools(); }
+        else { alert('操作失败：' + escapeHtml(d.error || '未知错误')); }
+    }).catch(function(err) {
+        hideLoading();
+        alert('请求失败，请检查网络连接');
+        console.error(err);
+    });
+}
+
+function completeTool(id) {
+    if (!confirm('确认完成制作此工具？')) return;
+    showLoading('完成制作...');
+    fetch('/api/tools/' + id + '/complete/', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrf()}
+    }).then(r => r.json()).then(d => {
+        hideLoading();
+        if (d.success) { alert('制作完成！'); loadTools(); }
+        else { alert('操作失败：' + escapeHtml(d.error || '未知错误')); }
+    }).catch(function(err) {
+        hideLoading();
+        alert('请求失败，请检查网络连接');
+        console.error(err);
+    });
+}
+
+function executeTool(id) {
+    var matId = prompt('请输入关联资料 ID：');
+    if (!matId) return;
+    showLoading('执行中...');
+    fetch('/api/tools/' + id + '/execute/', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrf()},
+        body: JSON.stringify({material_id: parseInt(matId)})
+    }).then(r => r.json()).then(d => {
+        hideLoading();
+        if (d.success) { alert('执行成功！执行ID：' + d.execution_id); loadExecutions(); }
+        else { alert('执行失败：' + escapeHtml(d.error || '未知错误')); }
+    }).catch(function(err) {
+        hideLoading();
+        alert('请求失败，请检查网络连接');
+        console.error(err);
+    });
+}
+
+// 新增工具
+function doCreate() {
+    document.getElementById('createModal').style.display = 'flex';
+}
+function closeCreate() {
+    document.getElementById('createModal').style.display = 'none';
+    document.getElementById('newName').value = '';
+    document.getElementById('newCode').value = '';
+    document.getElementById('newDesc').value = '';
+    document.getElementById('newVersion').value = '1.0';
+}
+function submitCreate() {
+    var name = document.getElementById('newName').value.trim();
+    var code = document.getElementById('newCode').value.trim();
+    if (!name || !code) { alert('工具名称和代码不能为空'); return; }
+    showLoading('创建中...');
+    fetch('/api/tools/', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrf()},
+        body: JSON.stringify({
+            name: name, code: code,
+            tool_type: document.getElementById('newType').value,
+            version: document.getElementById('newVersion').value,
+            description: document.getElementById('newDesc').value
+        })
+    }).then(r => r.json()).then(d => {
+        hideLoading();
+        if (d.id) { alert('创建成功！'); closeCreate(); loadTools(); }
+        else { alert('创建失败：' + JSON.stringify(d)); }
+    }).catch(function(err) {
+        hideLoading();
+        alert('请求失败，请检查网络连接');
+        console.error(err);
+    });
+}
+
+// 执行记录
 function loadExecutions() {
     var kw = document.getElementById('searchKeyword').value.trim();
     var tp = document.getElementById('searchType').value;
     var url = '/api/tools/executions/?page_size=10';
     if(tp) url += '&tool__tool_type=' + tp;
     if(kw) url += '&search=' + kw;
-    fetch(url)
-        .then(r => r.json()).then(function(d) {
-            var tb = document.getElementById('executionTable');
-            if (d.results && d.results.length) {
-                tb.innerHTML = d.results.map(function(e) {
-                    return '<tr><td>'+e.id+'</td><td>'+ (e.tool_name || '-') +'</td><td>'+ (e.material_serial_no || '-') +'</td><td><span class="tag" style="color:'+(statusColor[e.status]||'#909399')+'">'+ (statusName[e.status] || e.status) +'</span></td><td>'+ (e.executor_name || '-') +'</td><td>'+ (e.started_at ? new Date(e.started_at).toLocaleString('zh-CN') : '-') +'</td><td>'+ (e.duration ? e.duration+'秒' : '-') +'</td><td style="font-size:11px;">'+ ((e.output_files && e.output_files.length) ? e.output_files.join('<br>') : '-') +'</td><td style="color:#F56C6C;font-size:12px;">'+ (e.failure_reason || (e.error_message ? e.error_message.substring(0,30) : '-')) +'</td></tr>';
-                }).join('');
-            } else { tb.innerHTML = '<tr><td colspan="9"><div class="empty-state"><p>暂无执行记录</p></div></td></tr>'; }
-        });
+    fetch(url).then(r => r.json()).then(function(d) {
+        var tb = document.getElementById('executionTable');
+        if (d.results && d.results.length) {
+            tb.innerHTML = d.results.map(function(e) {
+                return '<tr><td>'+e.id+'</td><td>'+ (e.tool_name || '-') +'</td><td>'+ (e.material_serial_no || '-') +'</td><td><span class="tag" style="color:'+(statusColor[e.status]||'#909399')+'">'+ (statusName[e.status] || e.status) +'</span></td><td>'+ (e.executor_name || '-') +'</td><td>'+ (e.started_at ? new Date(e.started_at).toLocaleString('zh-CN') : '-') +'</td><td>'+ (e.duration ? e.duration+'秒' : '-') +'</td><td style="font-size:11px;">'+ ((e.output_files && e.output_files.length) ? e.output_files.join('<br>') : '-') +'</td><td style="color:#F56C6C;font-size:12px;">'+ (e.failure_reason || (e.error_message ? e.error_message.substring(0,30) : '-')) +'</td></tr>';
+            }).join('');
+        } else { tb.innerHTML = '<tr><td colspan="9"><div class="empty-state"><p>暂无执行记录</p></div></td></tr>'; }
+    });
 }
-function doSearch() { loadExecutions(); }
-function doReset() { document.getElementById('searchKeyword').value=''; document.getElementById('searchType').value=''; loadExecutions(); }
+
+function doSearch() { currentPage = 1; loadTools(); }
+function doReset() {
+    document.getElementById('searchKeyword').value = '';
+    document.getElementById('searchType').value = '';
+    document.getElementById('searchControl').value = '';
+    currentPage = 1;
+    loadTools();
+}
+function escapeHtml(text) {
+    if (!text) return '';
+    return String(text).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function getCsrf() { var m = document.cookie.match(/csrftoken=([^;]+)/); return m ? m[1] : ''; }
+
+loadTools();
 loadExecutions();
 </script>
 {% endblock %}

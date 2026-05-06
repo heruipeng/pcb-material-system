@@ -48,7 +48,10 @@ class Tool(models.Model):
     is_active = models.BooleanField('是否启用', default=True)
     is_system = models.BooleanField('系统工具', default=False)
     
+    # 时间记录
     created_at = models.DateTimeField('创建时间', auto_now_add=True)
+    started_at = models.DateTimeField('制作时间', null=True, blank=True, help_text='工具开始制作的时间')
+    completed_at = models.DateTimeField('制作完成时间', null=True, blank=True, help_text='工具制作完成的时间')
     updated_at = models.DateTimeField('更新时间', auto_now=True)
     
     class Meta:

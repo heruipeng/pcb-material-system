@@ -73,7 +73,6 @@
                 <th style="width:160px;">创建时间</th>
                 <th style="width:90px;">制作人</th>
                 <th style="width:110px;">状态</th>
-                <th style="width:120px;">操作</th>
             </tr>
         </thead>
         <tbody>
@@ -90,14 +89,10 @@
                 <td>{{ item.created_at|date:"Y-m-d H:i" }}</td>
                 <td>{{ item.maker_name|default:"-" }}</td>
                 <td><span class="tag tag-{{ item.status_display }}">{{ item.status_display }}</span></td>
-                <td>
-                    <a href="/materials/{{ item.id }}/" class="link-btn">详情</a>
-                    <a href="javascript:void(0)" class="link-btn" onclick="generateDoc({{ item.id }})">生成</a>
-                </td>
             </tr>
             {% endfor %}
             {% else %}
-            <tr><td colspan="11"><div class="empty-state"><p>暂无资料</p></div></td></tr>
+            <tr><td colspan="10"><div class="empty-state"><p>暂无资料</p></div></td></tr>
             {% endif %}
         </tbody>
     </table>
@@ -135,26 +130,6 @@ function doSearch() {
     window.location.href = '?' + p.toString();
 }
 function doReset() { window.location.href = '?'; }
-function generateDoc(id) {
-    if (!confirm('确定要生成资料吗？')) return;
-    showLoading('正在生成...');
-    fetch('/api/materials/' + id + '/generate/', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json','X-CSRFToken':getCsrf()}
-    }).then(r => r.json()).then(d => {
-        hideLoading();
-        if (d.success) {
-            alert('生成成功！当前状态：' + escapeHtml(d.status));
-            location.reload();
-        } else {
-            alert('生成失败：' + escapeHtml(d.error || '未知错误'));
-        }
-    }).catch(err => {
-        hideLoading();
-        alert('请求失败，请检查网络连接');
-        console.error(err);
-    });
-}
 function getCsrf() { var m = document.cookie.match(/csrftoken=([^;]+)/); return m ? m[1] : ''; }
 </script>
 {% endblock %}

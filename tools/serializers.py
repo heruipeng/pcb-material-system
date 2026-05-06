@@ -20,7 +20,8 @@ class ToolSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'name', 'code', 'category', 'category_name', 'tool_type', 
             'tool_type_display', 'description', 'version', 'config_template',
-            'default_params', 'is_active', 'is_system', 'created_at', 'updated_at'
+            'default_params', 'is_active', 'is_system', 
+            'created_at', 'started_at', 'completed_at', 'updated_at'
         ]
 
 
