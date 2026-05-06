@@ -248,8 +248,16 @@ class MaterialViewSet(viewsets.ModelViewSet):
         """创建资料"""
         if not self.request.user.has_permission(PERM_MATERIAL_CREATE):
             raise PermissionDenied('没有创建资料的权限')
-        
-        material = serializer.save(creator=self.request.user)
+
+        # 自动生成流水号（格式: SN + 年月日 + 4位随机）
+        import random
+        serial_no = serializer.validated_data.get('serial_no', '')
+        if not serial_no:
+            today = timezone.now().strftime('%Y%m%d')
+            suffix = ''.join(random.choices('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ', k=4))
+            serial_no = f'SN{today}{suffix}'
+
+        material = serializer.save(creator=self.request.user, serial_no=serial_no)
         
         # 记录操作历史
         MaterialHistory.objects.create(

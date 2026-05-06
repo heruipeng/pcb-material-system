@@ -27,6 +27,7 @@ class MaterialListSerializer(serializers.ModelSerializer):
             'status', 'status_display', 'remark', 'created_at', 'updated_at',
             'file_path', 'maker_name', 'creator_name'
         ]
+        read_only_fields = ['serial_no', 'created_at', 'updated_at']
 
 
 class MaterialSerializer(serializers.ModelSerializer):
@@ -49,7 +50,10 @@ class MaterialSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at', 'completed_at',
             'approver', 'approver_name', 'approved_at', 'approve_remark'
         ]
-        read_only_fields = ['serial_no', 'created_at', 'updated_at']
+        read_only_fields = ['created_at', 'updated_at']
+        extra_kwargs = {
+            'serial_no': {'required': False, 'allow_blank': True},
+        }
 
     def validate(self, data):
         """创建时检查料号+版本是否重复"""
