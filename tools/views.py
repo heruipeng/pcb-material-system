@@ -114,6 +114,14 @@ class ToolExecutionViewSet(viewsets.ReadOnlyModelViewSet):
         execution.save()
         return Response({'status': 'recycled'})
 
+    @action(detail=True, methods=['post'])
+    def update_execution(self, request, pk=None):
+        """更新执行记录"""
+        execution = self.get_object()
+        execution.updated_by = request.user
+        execution.save(update_fields=['updated_by', 'updated_at'])
+        return Response({'success': True, 'updated_at': execution.updated_at, 'updated_by': request.user.username})
+
     @action(detail=True, methods=['get'])
     def outputs(self, request, pk=None):
         """获取执行输出"""

@@ -97,6 +97,10 @@ class ToolExecution(models.Model):
     failure_reason = models.CharField('失败原因', max_length=500, blank=True)
     
     created_at = models.DateTimeField('创建时间', auto_now_add=True)
+    updated_at = models.DateTimeField('更新时间', auto_now=True)
+    updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+                                   null=True, blank=True, related_name='updated_executions',
+                                   verbose_name='更新人')
     
     class Meta:
         verbose_name = '工具执行记录'

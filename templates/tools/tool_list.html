@@ -62,11 +62,13 @@
                 <th style="width:60px;">耗时</th>
                 <th style="width:100px;">失败原因</th>
                 <th style="width:70px;">状态</th>
-                <th style="width:120px;">操作</th>
+                <th style="width:80px;">更新人</th>
+                <th style="width:130px;">更新时间</th>
+                <th style="width:140px;">操作</th>
             </tr>
         </thead>
         <tbody id="executionTable">
-            <tr><td colspan="13"><div class="empty-state"><p>加载中...</p></div></td></tr>
+            <tr><td colspan="15"><div class="empty-state"><p>加载中...</p></div></td></tr>
         </tbody>
     </table>
     <div class="pagination-bar" id="execPagination"></div>
@@ -101,11 +103,13 @@ function loadExecutions() {
                         + '<td>' + (e.duration ? e.duration + 's' : '-') + '</td>'
                         + '<td style="color:#F56C6C;font-size:11px;">' + (e.failure_reason || (e.error_message ? e.error_message.substring(0,20) : '-')) + '</td>'
                         + '<td><span class="tag" style="color:' + (statusColor[e.status] || '#909399') + ';font-size:11px;">' + (statusName[e.status] || e.status) + '</span></td>'
+                        + '<td>' + (e.updated_by_name || '-') + '</td>'
+                        + '<td>' + (e.updated_at ? new Date(e.updated_at).toLocaleString('zh-CN') : '-') + '</td>'
                         + '<td>' + getActionButtons(e) + '</td>'
                         + '</tr>';
                 }).join('');
                 renderExecPagination(d.count);
-            } else { tb.innerHTML = '<tr><td colspan="13"><div class="empty-state"><p>暂无记录</p></div></td></tr>'; document.getElementById('execPagination').innerHTML = ''; }
+            } else { tb.innerHTML = '<tr><td colspan="15"><div class="empty-state"><p>暂无记录</p></div></td></tr>'; document.getElementById('execPagination').innerHTML = ''; }
         });
 }
 
@@ -129,6 +133,7 @@ function doReset() { document.getElementById('searchKeyword').value=''; document
 function getActionButtons(e) {
     var btns = '<div style="display:flex;gap:4px;white-space:nowrap;">';
     btns += '<button class="btn btn-success btn-sm" onclick="viewOutputs(' + e.id + ')"><i class="fas fa-file-alt"></i> 输出</button>';
+    btns += '<button class="btn btn-primary btn-sm" onclick="updateExecution(' + e.id + ')"><i class="fas fa-edit"></i> 更新</button>';
     if (e.status !== 'recycled') {
         btns += '<button class="btn btn-sm" style="background:#909399;color:#fff;" onclick="recycleExecution(' + e.id + ')"><i class="fas fa-recycle"></i> 回收</button>';
     }
@@ -163,6 +168,23 @@ function recycleExecution(id) {
         hideLoading();
         if (d.status) { loadExecutions(); }
         else { alert('回收失败：' + (d.error || '未知错误')); }
+    }).catch(function(err) {
+        hideLoading();
+        alert('请求失败');
+        console.error(err);
+    });
+}
+
+function updateExecution(id) {
+    if (!confirm('确认更新此执行记录？')) return;
+    showLoading('更新中...');
+    fetch('/api/tools/executions/' + id + '/update_execution/', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrf()}
+    }).then(r => r.json()).then(d => {
+        hideLoading();
+        if (d.success) { alert('更新成功！'); loadExecutions(); }
+        else { alert('更新失败：' + (d.error || '未知错误')); }
     }).catch(function(err) {
         hideLoading();
         alert('请求失败');
