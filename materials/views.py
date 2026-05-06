@@ -129,10 +129,8 @@ def tool_detail_page(request, id):
     """工具详情页面"""
     from tools.models import Tool
     tool = get_object_or_404(Tool.objects.select_related('category'), pk=id)
-    executions = tool.executions.select_related('material', 'executor').all()[:20]
     context = {
         'tool': tool,
-        'executions': executions,
         'type_display': dict(Tool.TOOL_TYPE_CHOICES).get(tool.tool_type, tool.tool_type),
     }
     return render(request, 'tools/tool_detail.html', context)
