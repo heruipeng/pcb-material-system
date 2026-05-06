@@ -48,10 +48,7 @@ class Tool(models.Model):
     is_active = models.BooleanField('是否启用', default=True)
     is_system = models.BooleanField('系统工具', default=False)
     
-    # 时间记录
     created_at = models.DateTimeField('创建时间', auto_now_add=True)
-    started_at = models.DateTimeField('制作时间', null=True, blank=True, help_text='工具开始制作的时间')
-    completed_at = models.DateTimeField('制作完成时间', null=True, blank=True, help_text='工具制作完成的时间')
     updated_at = models.DateTimeField('更新时间', auto_now=True)
     
     class Meta:
@@ -89,8 +86,8 @@ class ToolExecution(models.Model):
     # 执行信息
     executor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, 
                                 null=True, verbose_name='执行人')
-    started_at = models.DateTimeField('开始时间', null=True, blank=True)
-    completed_at = models.DateTimeField('完成时间', null=True, blank=True)
+    started_at = models.DateTimeField('制作时间', null=True, blank=True)
+    completed_at = models.DateTimeField('制作完成时间', null=True, blank=True)
     duration = models.IntegerField('执行时长(秒)', null=True, blank=True)
     
     # 日志

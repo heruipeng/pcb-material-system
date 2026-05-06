@@ -153,7 +153,7 @@ def report_detail_page(request, id):
 
 @login_required(login_url='/login/')
 def tool_list_page(request):
-    """工具输出页面"""
+    """工具管理页面"""
     from tools.models import Tool, ToolExecution
     from django.db.models import Count
     TYPE_ICONS = {
