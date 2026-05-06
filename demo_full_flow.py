@@ -21,7 +21,20 @@ from datetime import datetime
 BASE_URL = "http://127.0.0.1:8080"
 USERNAME = "admin"
 PASSWORD = "admin123"
-TOKEN = None  # 运行时自动获取
+TOKEN = None  # 运行时自动获取，也可手动设置跳过认证步骤
+
+# 尝试从环境变量或 .env 文件加载 TOKEN
+import os as _os
+if not TOKEN:
+    TOKEN = _os.environ.get("API_TOKEN") or _os.environ.get("TOKEN")
+if not TOKEN:
+    _env_path = _os.path.join(_os.path.dirname(__file__), ".env")
+    if _os.path.exists(_env_path):
+        for _line in open(_env_path):
+            _line = _line.strip()
+            if _line.startswith("API_TOKEN=") or _line.startswith("TOKEN="):
+                TOKEN = _line.split("=", 1)[1].strip().strip('"').strip("'")
+                break
 
 # ====== 工具函数 ======
 def log(step, msg, emoji="📌"):
@@ -75,22 +88,25 @@ def main():
     print(f"  服务器: {BASE_URL}")
     print(f"  时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
-    # ─── 0. 登录 ───
-    hr("第0步: 获取 Token 认证")
+    # ─── 0. 获取 Token ───
+    hr("第0步: Token 认证")
     global TOKEN
-    # POST /api/auth/token/ 用用户名密码换取 token
-    resp = session.post(
-        f"{BASE_URL}/api/auth/token/",
-        json={"username": USERNAME, "password": PASSWORD},
-    )
-    if resp.status_code == 200:
-        TOKEN = resp.json().get("token")
-        log("认证", f"✅ Token 获取成功 ({TOKEN[:8]}...)")
+    if TOKEN:
+        log("认证", f"✅ 使用已有 Token ({TOKEN[:8]}...)，来源: {'环境变量/.env' if not TOKEN.startswith('manual') else '手动设置'}")
     else:
-        log("认证", f"❌ Token 获取失败，请检查用户名密码", "❌")
-        log("提示", f"首次使用需运行: python manage.py migrate 生成 authtoken 表", "💡")
-        log("提示", f"如果已有用户但没有 token，需要手动创建", "💡")
-        sys.exit(1)
+        # POST /api/auth/token/ 用用户名密码换取 token
+        resp = session.post(
+            f"{BASE_URL}/api/auth/token/",
+            json={"username": USERNAME, "password": PASSWORD},
+        )
+        if resp.status_code == 200:
+            TOKEN = resp.json().get("token")
+            log("认证", f"✅ Token 获取成功 ({TOKEN[:8]}...)")
+        else:
+            log("认证", f"❌ Token 获取失败，请检查用户名密码", "❌")
+            log("提示", f"首次使用需运行: python manage.py migrate 生成 authtoken 表", "💡")
+            log("提示", f"如果已有用户但没有 token: python get_token.py --save", "💡")
+            sys.exit(1)
 
     # ─── 1. 产线过账 ───
     hr("第1步: 产线过账 — 创建 ProductionJob")
