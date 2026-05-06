@@ -1,11 +1,24 @@
 from django.utils.deprecation import MiddlewareMixin
 from django.http import JsonResponse
+from django.contrib.auth.models import AnonymousUser
+from rest_framework.authtoken.models import Token
 from .permissions import PERMISSIONS
 
 
 class PermissionMiddleware(MiddlewareMixin):
     """权限中间件 - 检查用户是否有权限访问特定功能"""
-    
+
+    def _authenticate_token(self, request):
+        """尝试用 DRF Token 认证用户（API 调用用）"""
+        auth = request.META.get('HTTP_AUTHORIZATION', '')
+        if auth.startswith('Token '):
+            try:
+                token = Token.objects.select_related('user').get(key=auth[6:])
+                request.user = token.user
+                request._token_auth = True
+            except Token.DoesNotExist:
+                pass
+
     def process_request(self, request):
         # 跳过不需要权限检查的URL
         exempt_paths = [
@@ -23,6 +36,10 @@ class PermissionMiddleware(MiddlewareMixin):
             if path.startswith(exempt):
                 return None
         
+        # 对 API 请求，先尝试用 Token 认证
+        if path.startswith('/api/'):
+            self._authenticate_token(request)
+
         # 检查用户是否已认证
         if not request.user.is_authenticated:
             if path.startswith('/api/'):
