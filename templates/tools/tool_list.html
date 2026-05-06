@@ -60,10 +60,11 @@
                 <th style="width:80px;">耗时</th>
                 <th style="width:150px;">输出文件</th>
                 <th style="width:120px;">失败原因</th>
+                <th style="width:120px;">操作</th>
             </tr>
         </thead>
         <tbody id="executionTable">
-            <tr><td colspan="10"><div class="empty-state"><p>加载中...</p></div></td></tr>
+            <tr><td colspan="11"><div class="empty-state"><p>加载中...</p></div></td></tr>
         </tbody>
     </table>
 </div>
@@ -93,13 +94,81 @@ function loadExecutions() {
                         + '<td>' + (e.duration ? e.duration + '秒' : '-') + '</td>'
                         + '<td style="font-size:11px;">' + ((e.output_files && e.output_files.length) ? e.output_files.join('<br>') : '-') + '</td>'
                         + '<td style="color:#F56C6C;font-size:12px;">' + (e.failure_reason || (e.error_message ? e.error_message.substring(0,30) : '-')) + '</td>'
+                        + '<td>' + getActionButtons(e) + '</td>'
                         + '</tr>';
                 }).join('');
-            } else { tb.innerHTML = '<tr><td colspan="10"><div class="empty-state"><p>暂无记录</p></div></td></tr>'; }
+            } else { tb.innerHTML = '<tr><td colspan="11"><div class="empty-state"><p>暂无记录</p></div></td></tr>'; }
         });
 }
 function doSearch() { loadExecutions(); }
 function doReset() { document.getElementById('searchKeyword').value=''; document.getElementById('searchType').value=''; loadExecutions(); }
+
+function getActionButtons(e) {
+    var btns = '';
+    if (e.status === 'pending' || e.status === 'running') {
+        btns += '<button class="btn btn-danger btn-sm" onclick="cancelExecution(' + e.id + ')" title="取消"><i class="fas fa-times"></i> 取消</button> ';
+    }
+    if (e.tool) {
+        btns += '<button class="btn btn-primary btn-sm" onclick="reExecute(' + e.tool + ',' + e.material + ')" title="重新执行"><i class="fas fa-redo"></i> 重执行</button> ';
+    }
+    btns += '<a href="javascript:void(0)" class="link-btn" onclick="viewOutputs(' + e.id + ')">输出</a>';
+    return btns;
+}
+
+function cancelExecution(id) {
+    if (!confirm('确定取消此执行？')) return;
+    showLoading('取消中...');
+    fetch('/api/tools/executions/' + id + '/cancel/', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrf()}
+    }).then(r => r.json()).then(d => {
+        hideLoading();
+        if (d.status) { loadExecutions(); }
+        else { alert('取消失败'); }
+    }).catch(function(err) {
+        hideLoading();
+        alert('请求失败');
+        console.error(err);
+    });
+}
+
+function reExecute(toolId, materialId) {
+    if (!confirm('确定重新执行此工具？')) return;
+    showLoading('执行中...');
+    fetch('/api/tools/' + toolId + '/execute/', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrf()},
+        body: JSON.stringify({material_id: materialId})
+    }).then(r => r.json()).then(d => {
+        hideLoading();
+        if (d.success) { alert('执行成功！执行ID：' + d.execution_id); loadExecutions(); }
+        else { alert('执行失败：' + (d.error || '未知错误')); }
+    }).catch(function(err) {
+        hideLoading();
+        alert('请求失败');
+        console.error(err);
+    });
+}
+
+function viewOutputs(id) {
+    showLoading('加载输出...');
+    fetch('/api/tools/executions/' + id + '/outputs/')
+        .then(r => r.json()).then(d => {
+            hideLoading();
+            if (d.length) {
+                var msg = d.map(function(o) { return '[' + o.output_type_display + '] ' + o.name; }).join('\n');
+                alert('执行 #' + id + ' 的输出：\n\n' + msg);
+            } else {
+                alert('暂无输出');
+            }
+        }).catch(function(err) {
+            hideLoading();
+            alert('加载失败');
+            console.error(err);
+        });
+}
+
+function getCsrf() { var m = document.cookie.match(/csrftoken=([^;]+)/); return m ? m[1] : ''; }
 loadExecutions();
 </script>
 {% endblock %}
