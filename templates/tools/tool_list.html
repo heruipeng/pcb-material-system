@@ -53,13 +53,13 @@
                 <th style="width:60px;">ID</th>
                 <th style="width:120px;">工具</th>
                 <th style="width:160px;">关联资料</th>
-                <th style="width:90px;">状态</th>
+                <th style="width:150px;">输出文件</th>
                 <th style="width:90px;">执行人</th>
                 <th style="width:140px;">制作时间</th>
                 <th style="width:140px;">制作完成时间</th>
                 <th style="width:80px;">耗时</th>
-                <th style="width:150px;">输出文件</th>
                 <th style="width:120px;">失败原因</th>
+                <th style="width:90px;">状态</th>
                 <th style="width:120px;">操作</th>
             </tr>
         </thead>
@@ -87,13 +87,13 @@ function loadExecutions() {
                         + '<td>' + e.id + '</td>'
                         + '<td>' + (e.tool_name || '-') + '</td>'
                         + '<td>' + (e.material_serial_no || '-') + '</td>'
-                        + '<td><span class="tag" style="color:' + (statusColor[e.status] || '#909399') + '">' + (statusName[e.status] || e.status) + '</span></td>'
+                        + '<td style="font-size:11px;">' + ((e.output_files && e.output_files.length) ? e.output_files.join('<br>') : '-') + '</td>'
                         + '<td>' + (e.executor_name || '-') + '</td>'
                         + '<td>' + (e.started_at ? new Date(e.started_at).toLocaleString('zh-CN') : '-') + '</td>'
                         + '<td>' + (e.completed_at ? new Date(e.completed_at).toLocaleString('zh-CN') : '-') + '</td>'
                         + '<td>' + (e.duration ? e.duration + '秒' : '-') + '</td>'
-                        + '<td style="font-size:11px;">' + ((e.output_files && e.output_files.length) ? e.output_files.join('<br>') : '-') + '</td>'
                         + '<td style="color:#F56C6C;font-size:12px;">' + (e.failure_reason || (e.error_message ? e.error_message.substring(0,30) : '-')) + '</td>'
+                        + '<td><span class="tag" style="color:' + (statusColor[e.status] || '#909399') + '">' + (statusName[e.status] || e.status) + '</span></td>'
                         + '<td>' + getActionButtons(e) + '</td>'
                         + '</tr>';
                 }).join('');
