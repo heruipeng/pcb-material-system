@@ -16,6 +16,8 @@ class PermissionMiddleware(MiddlewareMixin):
                 token = Token.objects.select_related('user').get(key=auth[6:])
                 request.user = token.user
                 request._token_auth = True
+                # Token 认证不需要 CSRF 检查
+                request.csrf_processing_done = True
             except Token.DoesNotExist:
                 pass
 
