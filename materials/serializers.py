@@ -51,6 +51,22 @@ class MaterialSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['serial_no', 'created_at', 'updated_at']
 
+    def validate(self, data):
+        """创建时检查料号+版本是否重复"""
+        if self.instance is None:  # 仅创建时检查
+            material_no = data.get('material_no')
+            version_code = data.get('version_code')
+            if material_no and version_code:
+                existing = Material.objects.filter(
+                    material_no=material_no,
+                    version_code=version_code
+                ).first()
+                if existing:
+                    raise serializers.ValidationError(
+                        f'料号「{material_no}」版本「{version_code}」已存在（流水号：{existing.serial_no}），请勿重复创建'
+                    )
+        return data
+
 
 class MaterialHistorySerializer(serializers.ModelSerializer):
     operator_name = serializers.CharField(source='operator.username', read_only=True, default='')

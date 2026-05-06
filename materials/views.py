@@ -352,13 +352,39 @@ class MaterialViewSet(viewsets.ModelViewSet):
             material.maker = request.user
             material.save()
 
-        # 自动关联工具并创建执行记录
+        # 自动关联工具，但先检查是否已有未完成的执行记录（防重）
         from tools.models import Tool, ToolExecution
+        existing_execution = ToolExecution.objects.filter(
+            material=material,
+            status__in=['pending', 'running']
+        ).first()
+        if existing_execution:
+            return Response({
+                'success': True,
+                'status': material.status,
+                'execution_id': existing_execution.id,
+                'tool_name': existing_execution.tool.name,
+                'note': '已存在执行记录，复用已有'
+            })
+
         tool = Tool.objects.filter(
             tool_type=material.process_type, is_active=True
         ).first()
         execution = None
         if tool:
+            # 二次检查：同一 material + tool 是否有已完成的记录（可选：是否允许重复完成？）
+            completed_exec = ToolExecution.objects.filter(
+                material=material, tool=tool, status='completed'
+            ).first()
+            if completed_exec:
+                return Response({
+                    'success': True,
+                    'status': material.status,
+                    'execution_id': completed_exec.id,
+                    'tool_name': tool.name,
+                    'note': '该料号已完成制作，无需重复生成'
+                })
+
             execution = ToolExecution.objects.create(
                 tool=tool,
                 material=material,

@@ -28,7 +28,6 @@ class PermissionMiddleware(MiddlewareMixin):
             '/api/auth/login/',
             '/api/auth/register/',
             '/api/auth/token/',
-            '/api/production/',
             '/static/',
             '/media/',
         ]

@@ -79,6 +79,9 @@ class Material(models.Model):
         verbose_name = '工程资料'
         verbose_name_plural = '工程资料'
         ordering = ['-created_at']
+        unique_together = [
+            ['material_no', 'version_code'],
+        ]
         indexes = [
             models.Index(fields=['serial_no']),
             models.Index(fields=['material_no']),

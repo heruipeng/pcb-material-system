@@ -1,7 +1,7 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django.utils import timezone
@@ -42,7 +42,7 @@ class ProductionJobViewSet(viewsets.ReadOnlyModelViewSet):
         request=ProductionPostSerializer,
         responses={201: ProductionJobDetailSerializer},
     )
-    @action(detail=False, methods=['post'], permission_classes=[AllowAny])
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
     def post(self, request):
         """产线过账 - 创建作业记录"""
         serializer = ProductionPostSerializer(data=request.data)
@@ -63,7 +63,7 @@ class ProductionJobViewSet(viewsets.ReadOnlyModelViewSet):
         request=ProductionStartSerializer,
         responses={200: ProductionJobDetailSerializer},
     )
-    @action(detail=True, methods=['post'], permission_classes=[AllowAny])
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
     def start(self, request, pk=None):
         """脚本开始处理作业"""
         job = self.get_object()
@@ -90,7 +90,7 @@ class ProductionJobViewSet(viewsets.ReadOnlyModelViewSet):
         request=ProductionCompleteSerializer,
         responses={200: ProductionJobDetailSerializer},
     )
-    @action(detail=True, methods=['post'], permission_classes=[AllowAny])
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
     def complete(self, request, pk=None):
         """脚本完成处理并上传结果"""
         job = self.get_object()
@@ -121,20 +121,24 @@ class ProductionJobViewSet(viewsets.ReadOnlyModelViewSet):
                 material.completed_at = job.completed_at
                 material.save()
 
-                # 同步创建工具执行记录
+                # 同步创建工具执行记录（防重：同一作业+同一工具已完成的不重复创建）
                 from tools.models import Tool, ToolExecution
                 tool = Tool.objects.filter(tool_type=job.tool_type, is_active=True).first()
                 if tool:
-                    ToolExecution.objects.create(
-                        tool=tool,
-                        material=material,
-                        params=job.post_data,
-                        status='completed',
-                        output_files=job.output_files or [],
-                        started_at=job.processing_at,
-                        completed_at=job.completed_at,
-                        duration=job.duration,
-                    )
+                    already_exists = ToolExecution.objects.filter(
+                        material=material, tool=tool, status='completed'
+                    ).exists()
+                    if not already_exists:
+                        ToolExecution.objects.create(
+                            tool=tool,
+                            material=material,
+                            params=job.post_data,
+                            status='completed',
+                            output_files=job.output_files or [],
+                            started_at=job.processing_at,
+                            completed_at=job.completed_at,
+                            duration=job.duration,
+                        )
             except Material.DoesNotExist:
                 # 资料尚未在系统中创建，仅记录日志
                 import logging

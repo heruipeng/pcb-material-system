@@ -55,6 +55,9 @@ class Tool(models.Model):
         verbose_name = '工具'
         verbose_name_plural = '工具'
         ordering = ['category', 'sort_order', 'id']
+        unique_together = [
+            ['name', 'version'],
+        ]
         
     def __str__(self):
         return f"{self.name} (v{self.version})"
