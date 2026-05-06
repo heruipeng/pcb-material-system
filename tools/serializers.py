@@ -30,11 +30,14 @@ class ToolExecutionSerializer(serializers.ModelSerializer):
     executor_name = serializers.CharField(source='executor.username', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     material_serial_no = serializers.CharField(source='material.serial_no', read_only=True)
+    material_no = serializers.CharField(source='material.material_no', read_only=True)
+    material_version = serializers.CharField(source='material.version_code', read_only=True)
     
     class Meta:
         model = ToolExecution
         fields = [
             'id', 'tool', 'tool_name', 'material', 'material_serial_no',
+            'material_no', 'material_version',
             'params', 'status', 'status_display', 'input_files', 'output_files',
             'output_data', 'executor', 'executor_name', 'started_at', 
             'completed_at', 'duration', 'log_output', 'error_message',
