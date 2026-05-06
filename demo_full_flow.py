@@ -18,9 +18,10 @@ import sys
 from datetime import datetime
 
 # ====== 配置 ======
-BASE_URL = "http://127.0.0.1:8000"
+BASE_URL = "http://127.0.0.1:8080"
 USERNAME = "admin"
 PASSWORD = "admin123"
+TOKEN = None  # 运行时自动获取
 
 # ====== 工具函数 ======
 def log(step, msg, emoji="📌"):
@@ -28,16 +29,12 @@ def log(step, msg, emoji="📌"):
     print(f"  {emoji} [{step}] {msg}")
 
 
-def api(method, path, data=None, use_auth=True):
-    """统一 API 请求，自动处理认证和错误"""
+def api(method, path, data=None):
+    """统一 API 请求，使用 Token 认证"""
     url = f"{BASE_URL}{path}"
-    csrf = session.cookies.get("csrftoken", session.cookies.get("csrf", ""))
-    headers = {
-        "Content-Type": "application/json",
-        "Referer": url,
-    }
-    if csrf:
-        headers["X-CSRFToken"] = csrf
+    headers = {"Content-Type": "application/json"}
+    if TOKEN:
+        headers["Authorization"] = f"Token {TOKEN}"
 
     try:
         if method == "GET":
@@ -79,30 +76,20 @@ def main():
     print(f"  时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
     # ─── 0. 登录 ───
-    hr("第0步: 登录系统")
-    # 1) 先 GET 登录页面获取 CSRF token
-    login_page = session.get(f"{BASE_URL}/login/")
-    csrf = session.cookies.get("csrftoken", "")
-    if not csrf:
-        log("登录", "❌ 无法获取 CSRF token，请确认服务器运行正常", "❌")
-        sys.exit(1)
-    # 2) 带 CSRF token 提交登录表单
+    hr("第0步: 获取 Token 认证")
+    global TOKEN
+    # POST /api/auth/token/ 用用户名密码换取 token
     resp = session.post(
-        f"{BASE_URL}/login/",
-        data={"username": USERNAME, "password": PASSWORD, "csrfmiddlewaretoken": csrf},
-        headers={"Referer": f"{BASE_URL}/login/", "X-CSRFToken": csrf},
-        allow_redirects=False,
+        f"{BASE_URL}/api/auth/token/",
+        json={"username": USERNAME, "password": PASSWORD},
     )
-    if resp.status_code in (302, 200) and "sessionid" in session.cookies:
-        log("登录", f"✅ 用户 {USERNAME} 登录成功")
+    if resp.status_code == 200:
+        TOKEN = resp.json().get("token")
+        log("认证", f"✅ Token 获取成功 ({TOKEN[:8]}...)")
     else:
-        # 检查错误信息
-        err = "未知错误"
-        if "请先登录" in resp.text or "login" in resp.url:
-            err = "用户名或密码错误，请检查 USERNAME/PASSWORD 配置"
-        elif resp.status_code == 200:
-            err = f"登录页返回 200（可能用户名密码错误），状态码异常"
-        log("登录", f"❌ 登录失败: {err}", "❌")
+        log("认证", f"❌ Token 获取失败，请检查用户名密码", "❌")
+        log("提示", f"首次使用需运行: python manage.py migrate 生成 authtoken 表", "💡")
+        log("提示", f"如果已有用户但没有 token，需要手动创建", "💡")
         sys.exit(1)
 
     # ─── 1. 产线过账 ───
@@ -122,7 +109,7 @@ def main():
             "layer_count": 8,
         },
     }
-    result = api("POST", "/api/production/jobs/post/", post_data, use_auth=False)
+    result = api("POST", "/api/production/jobs/post/", post_data)
     if result:
         job_id = result["id"]
         log("过账", f"ProductionJob #{job_id} 已创建 | 状态: {result['status']} | 工单: {result['job_no']}")
@@ -173,7 +160,7 @@ def main():
 
     # 4b: 脚本标记开始处理
     result = api("POST", f"/api/production/jobs/{job_id}/start/",
-                 {"processor": "flyprobe_worker_01"}, use_auth=False)
+                 {"processor": "flyprobe_worker_01"})
     if result:
         log("开始", f"作业状态 → {result['status']} | 处理脚本: {result['processor']}")
     else:
@@ -209,7 +196,7 @@ def main():
         "completed_at": "2026-05-06T09:03:45Z",
     }
     result = api("POST", f"/api/production/jobs/{job_id}/complete/",
-                 complete_data, use_auth=False)
+                 complete_data)
     if result:
         log("完成", f"作业状态 → {result['status']}")
         log("输出", f"文件: {', '.join(result.get('output_files', []))}")

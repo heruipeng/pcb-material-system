@@ -1,5 +1,8 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from rest_framework.authtoken.models import Token
 
 
 class User(AbstractUser):
@@ -57,3 +60,10 @@ class RolePermission(models.Model):
         verbose_name = '角色权限'
         verbose_name_plural = '角色权限'
         unique_together = ['role', 'permission']
+
+
+# ====== 信号：自动为用户创建 Token ======
+@receiver(post_save, sender=User)
+def create_auth_token(sender, instance=None, created=False, **kwargs):
+    if created:
+        Token.objects.create(user=instance)
