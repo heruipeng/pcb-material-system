@@ -31,17 +31,19 @@ def log(step, msg, emoji="📌"):
 def api(method, path, data=None, use_auth=True):
     """统一 API 请求，自动处理认证和错误"""
     url = f"{BASE_URL}{path}"
-    headers = {"Content-Type": "application/json"}
-    kwargs = {"headers": headers}
-
-    if use_auth and session.cookies.get("sessionid"):
-        kwargs["headers"]["X-CSRFToken"] = session.cookies.get("csrftoken", "")
+    csrf = session.cookies.get("csrftoken", session.cookies.get("csrf", ""))
+    headers = {
+        "Content-Type": "application/json",
+        "Referer": url,
+    }
+    if csrf:
+        headers["X-CSRFToken"] = csrf
 
     try:
         if method == "GET":
-            resp = session.get(url, **kwargs)
+            resp = session.get(url, headers=headers)
         elif method == "POST":
-            resp = session.post(url, json=data, **kwargs)
+            resp = session.post(url, json=data, headers=headers)
         else:
             raise ValueError(f"Unknown method: {method}")
 
@@ -78,15 +80,29 @@ def main():
 
     # ─── 0. 登录 ───
     hr("第0步: 登录系统")
+    # 1) 先 GET 登录页面获取 CSRF token
+    login_page = session.get(f"{BASE_URL}/login/")
+    csrf = session.cookies.get("csrftoken", "")
+    if not csrf:
+        log("登录", "❌ 无法获取 CSRF token，请确认服务器运行正常", "❌")
+        sys.exit(1)
+    # 2) 带 CSRF token 提交登录表单
     resp = session.post(
         f"{BASE_URL}/login/",
-        data={"username": USERNAME, "password": PASSWORD},
+        data={"username": USERNAME, "password": PASSWORD, "csrfmiddlewaretoken": csrf},
+        headers={"Referer": f"{BASE_URL}/login/", "X-CSRFToken": csrf},
         allow_redirects=False,
     )
-    if resp.status_code in (302, 200):
+    if resp.status_code in (302, 200) and "sessionid" in session.cookies:
         log("登录", f"✅ 用户 {USERNAME} 登录成功")
     else:
-        log("登录", f"❌ 登录失败，请检查用户名密码", "❌")
+        # 检查错误信息
+        err = "未知错误"
+        if "请先登录" in resp.text or "login" in resp.url:
+            err = "用户名或密码错误，请检查 USERNAME/PASSWORD 配置"
+        elif resp.status_code == 200:
+            err = f"登录页返回 200（可能用户名密码错误），状态码异常"
+        log("登录", f"❌ 登录失败: {err}", "❌")
         sys.exit(1)
 
     # ─── 1. 产线过账 ───
