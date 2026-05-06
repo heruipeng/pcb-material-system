@@ -112,7 +112,7 @@ class ProductionJobViewSet(viewsets.ReadOnlyModelViewSet):
             job.completed_at = data.get('completed_at') or timezone.now()
             job.duration = data.get('duration')
 
-            # 关联到 Material 表（如果存在）
+            # 关联到 Material 表（如果存在），并记录工具执行
             try:
                 from materials.models import Material
                 material = Material.objects.get(serial_no=job.serial_no)
@@ -120,8 +120,27 @@ class ProductionJobViewSet(viewsets.ReadOnlyModelViewSet):
                 material.status = 'completed'
                 material.completed_at = job.completed_at
                 material.save()
-            except Exception:
-                pass  # 忽略关联失败
+
+                # 同步创建工具执行记录
+                from tools.models import Tool, ToolExecution
+                tool = Tool.objects.filter(tool_type=job.tool_type, is_active=True).first()
+                if tool:
+                    ToolExecution.objects.create(
+                        tool=tool,
+                        material=material,
+                        params=job.post_data,
+                        status='completed',
+                        output_files=job.output_files or [],
+                        started_at=job.processing_at,
+                        completed_at=job.completed_at,
+                        duration=job.duration,
+                    )
+            except Material.DoesNotExist:
+                # 资料尚未在系统中创建，仅记录日志
+                import logging
+                logging.getLogger('pcb_system').warning(
+                    f'产线作业 {job.job_no} 完成，但资料 {job.serial_no} 不存在于系统中'
+                )
 
         else:
             job.status = 'failed'

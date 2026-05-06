@@ -110,6 +110,7 @@ def dashboard_page(request):
     return render(request, 'dashboard.html', {})
 
 
+@login_required(login_url='/login/')
 def material_detail_page(request, id):
     """资料详情页面"""
     material = get_object_or_404(Material.objects.select_related('factory', 'maker', 'creator', 'category'), pk=id)
@@ -125,6 +126,7 @@ def material_detail_page(request, id):
     return render(request, 'materials/material_detail.html', context)
 
 
+@login_required(login_url='/login/')
 def tool_detail_page(request, id):
     """工具详情页面"""
     from tools.models import Tool
@@ -136,6 +138,7 @@ def tool_detail_page(request, id):
     return render(request, 'tools/tool_detail.html', context)
 
 
+@login_required(login_url='/login/')
 def report_detail_page(request, id):
     """报表详情页面"""
     from reports.models import Report
@@ -152,7 +155,7 @@ def report_detail_page(request, id):
 @login_required(login_url='/login/')
 def tool_list_page(request):
     """工具管理页面"""
-    from tools.models import Tool, ToolExecution
+    from tools.models import Tool
     from django.db.models import Count
     TYPE_ICONS = {
         'fly_probe': 'fa-bolt', 'impedance': 'fa-wave-square', 'aoi': 'fa-eye',
@@ -162,18 +165,21 @@ def tool_list_page(request):
         'fly_probe': '#409EFF', 'impedance': '#67C23A', 'aoi': '#409EFF',
         'xray': '#E6A23C', 'ict': '#F56C6C', 'functional': '#909399',
     }
-    tools = []
-    for t in Tool.objects.filter(is_active=True):
-        tools.append({
+    tools = Tool.objects.filter(is_active=True).annotate(
+        exec_count=Count('executions')
+    )
+    tools_list = []
+    for t in tools:
+        tools_list.append({
             'id': t.id,
             'name': t.name,
             'type': t.tool_type,
             'icon': 'fas ' + TYPE_ICONS.get(t.tool_type, 'fa-tools'),
             'color': TYPE_COLORS.get(t.tool_type, '#909399'),
             'desc': t.description or '',
-            'count': ToolExecution.objects.filter(tool=t).count(),
+            'count': t.exec_count,
         })
-    return render(request, 'tools/tool_list.html', {'tools': tools})
+    return render(request, 'tools/tool_list.html', {'tools': tools_list})
 
 
 @login_required(login_url='/login/')
@@ -346,15 +352,34 @@ class MaterialViewSet(viewsets.ModelViewSet):
             material.maker = request.user
             material.save()
 
+        # 自动关联工具并创建执行记录
+        from tools.models import Tool, ToolExecution
+        tool = Tool.objects.filter(
+            tool_type=material.process_type, is_active=True
+        ).first()
+        execution = None
+        if tool:
+            execution = ToolExecution.objects.create(
+                tool=tool,
+                material=material,
+                status='pending',
+                executor=request.user,
+            )
+
         MaterialHistory.objects.create(
             material=material,
             action='publish',
             operator=request.user,
-            remark='生成资料'
+            remark='生成资料' + (f'，关联工具 #{tool.id}' if tool else '')
         )
         log_operation(request, 'create', 'materials', 'Material', material.id,
                      f'触发生成资料 {material.serial_no}')
-        return Response({'success': True, 'status': material.status})
+
+        result = {'success': True, 'status': material.status}
+        if execution:
+            result['execution_id'] = execution.id
+            result['tool_name'] = tool.name
+        return Response(result)
 
     @action(detail=True, methods=['post'])
     def publish(self, request, pk=None):
