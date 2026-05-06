@@ -9,7 +9,7 @@ import requests
 import sys
 import os
 
-BASE_URL = "http://127.0.0.1:8000"
+BASE_URL = "http://127.0.0.1:8080"
 USERNAME = "admin"
 PASSWORD = "admin123"
 
